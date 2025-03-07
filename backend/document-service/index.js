@@ -3,15 +3,20 @@ import dotenv from "dotenv";
 import cors from "cors";
 import documentRoutes from "./routes/documentRoutes.js";
 import sequelize from "./config/db.js";
-
+import cookieParser from "cookie-parser";
 dotenv.config();
 const app = express();
 
 // ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ origin: "*", credentials: true }));
-
+app.use(cookieParser()); 
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  })
+);
 // ✅ API Routes
 app.use("/api/documents", documentRoutes);
 
