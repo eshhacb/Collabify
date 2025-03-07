@@ -15,6 +15,8 @@ const CollaborationPage = () => {
     const [documentContent, setDocumentContent] = useState(""); 
 
     const handleAISuggestion = async () => {
+      console.log("Sending documentContent to backend:", documentContent); // Debugging
+
       setLoading(true);  //set loading indicator
       try {
           const response = await axios.post("http://localhost:7000/api/ai-suggestion", {

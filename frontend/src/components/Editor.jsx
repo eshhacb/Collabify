@@ -56,6 +56,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     setIsSaving(true);
     emitChange(value);
     onContentChange(value); 
+    
   };
 
   useEffect(() => {

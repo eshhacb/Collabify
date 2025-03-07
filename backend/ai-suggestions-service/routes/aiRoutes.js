@@ -9,13 +9,17 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 router.post("/ai-suggestion", async (req, res) => {
     try {
         const { documentText } = req.body;
+        console.log("Received text from frontend:", documentText); // Debugging
+
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
         const response = await model.generateContent({
             contents: [{
                 role: "user",
                 parts: [{
-                    text: `Improve the following text by correcting grammar and spelling mistakes:\n\n${documentText}`
+                    text:  `Improve the following text by correcting grammar and spelling mistakes. Return only the improved text without any additional comments, explanations, or formatting:
+
+                    ${documentText}`
                 }]
             }]
         });
