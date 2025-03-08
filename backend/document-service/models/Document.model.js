@@ -6,23 +6,18 @@ const Document = sequelize.define(
   {
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
+      defaultValue: DataTypes.UUIDV4, // ✅ Auto-generates UUID
       primaryKey: true,
     },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    content: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      defaultValue: "",
-    },
   },
   {
-    tableName: "Document", // ✅ Prevents Sequelize from pluralizing
-    timestamps: true, // ✅ Adds `createdAt` & `updatedAt`
-    paranoid: true, // ✅ Enables soft deletes (`deletedAt` field)
+    tableName: "Document",
+    timestamps: true,
+    paranoid: true,
   }
 );
 

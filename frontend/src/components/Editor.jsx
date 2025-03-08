@@ -4,6 +4,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import axios from "axios";
 import { debounce } from "lodash";
+import CustomEditor from "./CustomEditor"; 
 
 const API_BASE_URL = 'http://localhost:8000';
 console.log("this is api base url ",API_BASE_URL);
@@ -44,6 +45,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
 
   const emitChange = useCallback(
     debounce((value) => {
+      console.log("Sending updated content to backend:", value);
       socket.emit("edit-document", { documentId, content: value });
       setIsSaving(false);
     }, 1000),
@@ -60,8 +62,10 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
   };
 
   useEffect(() => {
+    console.log("Received externalContent in Editor:", externalContent);
     if (externalContent !== undefined && externalContent !== content) {
       setContent(externalContent);
+      console.log("Updated editor content:", externalContent);
       // onContentChange(externalContent);
     }
   }, [externalContent])
@@ -74,7 +78,8 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
         <span>Editing: {documentId}</span>
         <span>{isSaving ? "Saving..." : "Saved"}</span>
       </div>
-      <ReactQuill value={content} onChange={handleChange} className="h-[80vh]" />
+      {/* <ReactQuill value={content} onChange={handleChange} className="h-[80vh]" /> */}
+      <CustomEditor value={content} onChange={handleChange} />
     </div>
   );
 };

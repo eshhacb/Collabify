@@ -40,16 +40,16 @@ app.use(
   })
 );
 
-// // ✅ Proxy to Collaboration Service
-// app.use(
-//   "/api/collab",
-//   proxy(process.env.COLLAB_SERVICE_URL, {
-//     proxyReqPathResolver: (req) => `/api/collab${req.url}`,
-//     proxyErrorHandler: (err, res, next) => {
-//       res.status(500).json({ error: "API Gateway Proxy Error (Collaboration Service)" });
-//     },
-//   })
-// );
+// ✅ Proxy to Collaboration Service
+app.use(
+  "/api/collaboration",
+  proxy(process.env.COLLAB_SERVICE_URL, {
+    proxyReqPathResolver: (req) => `/api/collaboration${req.url}`,
+    proxyErrorHandler: (err, res, next) => {
+      res.status(500).json({ error: "API Gateway Proxy Error (Collaboration Service)" });
+    },
+  })
+);
 
 // // ✅ Proxy to AI Suggestions Service
 // app.use(
