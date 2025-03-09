@@ -10,7 +10,7 @@ const Login = () => {
   const handleLogin = async () => {
     try {
       await loginUser({ email, password });
-      navigate("/dashboard");
+      navigate("/documents");
     } catch (error) {
       console.error("Login failed:", error.response?.data?.message || error.message);
     }

@@ -36,9 +36,18 @@ const CollaborationPage = () => {
 };
 
 const applySuggestion = () => {
+  console.log("Before applying suggestion",suggestion)
   setDocumentContent(suggestion);
+  console.log("Before applying suggestion",documentContent);
+  //debug
+  setTimeout(() => {
+    console.log("After applying suggestion:", documentContent);
+  }, 1000); // Check if state updates properly
+
   setShowModal(false);
+
 };
+
 
   return (
     <div className="flex">
