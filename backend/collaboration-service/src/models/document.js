@@ -1,26 +1,23 @@
 import mongoose from "mongoose";
 
-const documentSchema = new mongoose.Schema({
-  _id:{
-    type:String,
-    required:true
-  }, 
-  content:{
-    type:String,
-    default:"",
-  },
-  history: [
-    {
-      type: { type: String, enum: ["insert", "delete"], required:true },
-      index:{type: Number, required: true },
-      text: { type: String, default: "" },
-      length: { type: Number, required: function () { return this.type === "delete"; } }
+const documentSchema = new mongoose.Schema(
+  {
+    _id: {
+      type: String, // ✅ Ensure it's a string (UUID from PostgreSQL)
+      required: true,
     },
-  ],
-  lastUpdated: {
-    type: Date,
-    default: Date.now,
+    content: {
+      type: String,
+      default: "",
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now,
+    },
   },
-});
+  {
+    collection: "documents", // ✅ Explicitly set collection name
+  }
+);
 
 export default mongoose.model("Document", documentSchema);

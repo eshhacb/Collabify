@@ -5,5 +5,5 @@ const router = express.Router();
 
 router.get("/:id", getDocument);
 router.post("/:id", saveDocument);
-router.post("/create-MongoDocument",createDocument)
+router.post("/create-doc",createDocument)
 export default router;

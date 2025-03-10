@@ -34,31 +34,39 @@ export const saveDocument = async (req, res) => {
 
 export const createDocument = async (req, res) => {
   try {
-    const { documentId } = req.body; // ✅ Receive `documentId` from `document-service`
-    console.log(documentId)
+    const { documentId } = req.body;
 
     if (!documentId) {
-      return res.status(400).json({ message: "Document ID is required" });
+      return res.status(400).json({ error: "❌ Missing documentId in request body" });
     }
 
     // ✅ Check if document already exists
-    let document = await Document.findById(documentId);
-    if (document) {
-      return res.status(409).json({ message: "Document already exists", document });
+    const existingDocument = await Document.findById(documentId);
+    if (existingDocument) {
+      return res.status(200).json({
+        message: "⚠️ Document already exists in MongoDB",
+        document: existingDocument,
+      });
     }
 
-    // ✅ Create a new document in MongoDB
-    document = new Document.create({
-      _id: documentId,
-      content: "", // Empty content initially
-      history: [],
-      lastUpdated: Date.now(),
+    // ✅ Fix the .create() usage (Remove `new`)
+    const newDocument = await Document.create({
+      _id: documentId, // Store as MongoDB _id
+      content: "",
+      lastUpdated: new Date(),
     });
-    await document.save();
 
-    res.status(201).json({ message: "Document created in MongoDB", document });
+    console.log("✅ Document created in MongoDB:", newDocument);
+
+    res.status(201).json({
+      message: "📄 Document created successfully in MongoDB",
+      document: newDocument,
+    });
   } catch (error) {
-    console.error("❌ Error creating document in MongoDB:", error);
-    res.status(500).json({ message: "Error creating document", error: error.message });
+    console.error("❌ Error saving document in MongoDB:", error);
+    res.status(500).json({
+      error: "❌ Error creating document in MongoDB",
+      details: error.message,
+    });
   }
 };

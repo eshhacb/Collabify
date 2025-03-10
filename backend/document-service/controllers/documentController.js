@@ -1,48 +1,68 @@
 import Document from "../models/Document.model.js";
 import UserDocument from "../models/UserDocument.js";
-import { v4 as uuidv4 } from "uuid";
-import axios from "axios"
-import dotenv from "dotenv"
+import { v4 as uuidv4 } from "uuid"; // Import UUID Generator
+import { Sequelize } from "sequelize"; // Import Sequelize for UUID conversion
+import axios from "axios";
+import dotenv from "dotenv";
 
 dotenv.config();
+
 export const createDocument = async (req, res) => {
   try {
     const { title } = req.body;
     const userId = req.user.userId;
 
-    // 🔹 Create a new document in PostgreSQL
-    const document = await Document.create({ title });
+    // ✅ Generate a UUID as a string
+    const documentId = uuidv4();
+    console.log("Generated Document ID:", documentId);
 
-    if (!document.id) {
-      throw new Error("Failed to retrieve document ID after creation");
+    // ✅ Convert UUID string to Sequelize UUID format
+    // const formattedDocumentId = Sequelize.UUIDV4;
+
+    // ✅ Create a new document in PostgreSQL (Sequelize will accept UUID)
+    const document = await Document.create({
+      id: documentId, // Use manually generated UUID
+      title,
+    });
+
+    // ✅ Ensure the document was created successfully
+    if (!document || !document.id) {
+      throw new Error("❌ Document ID is undefined after creation.");
     }
 
-    // 🔹 Assign Admin role to the document creator
-    await UserDocument.create({
+    console.log("✅ Document Created:", document);
+
+    // ✅ Assign Admin role to the document creator
+    const userDoc = await UserDocument.create({
       userId,
-      documentId: document.id, // Ensure ID exists
+      documentId: document.id, // Use UUID
       role: "admin",
     });
 
-    // 🔹 Send document ID to MongoDB Collaboration Service
-    
-    await axios.post(`${process.env.COLLAB_SERVICE_URL}/create-MongoDocument`, {
-      documentId: document.id,
+    console.log("✅ UserDocument Created:", userDoc);
+
+    // ✅ Send document ID to MongoDB Collaboration Service
+    console.log(process.env.COLLAB_SERVICE_URL)
+    console.log("sending to mongo",typeof(documentId));
+   
+    await axios.post(`http://localhost:8000/api/collaboration/create-doc`, {
+       // Ensure it's a string
+       documentId,
     });
+    
 
     res.status(201).json({
       message: "Document created successfully",
       document,
     });
   } catch (error) {
-    console.error("❌ Error creating document:", error);
+    
     res.status(500).json({
       message: "Error creating document",
       error: error.message,
     });
   }
 };
-
 
 export const getAllDocuments = async (req, res) => {
   try {

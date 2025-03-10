@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/documents";
+const API_URL = "http://localhost:4001/api/documents";
 
 // ✅ Always send cookies (which contain the token)
 axios.defaults.withCredentials = true;
