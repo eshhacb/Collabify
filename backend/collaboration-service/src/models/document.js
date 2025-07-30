@@ -9,6 +9,11 @@ const documentSchema = new mongoose.Schema({
     type:String,
     default:"",
   },
+  // title:{
+  //   type:String,
+  //   default:"",
+  //   required:true,
+  // },
   history: [
     {
       type: { type: String, enum: ["insert", "delete"], required:true },

@@ -22,10 +22,18 @@ app.use(cors());
 app.use(express.json());
 
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  })
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => {
     console.error("DB Connection Error:", err);
+    console.error("Please check:");
+    console.error("1. Your internet connection");
+    console.error("2. MongoDB Atlas cluster is running");
+    console.error("3. Your IP is whitelisted in MongoDB Atlas");
+    console.error("4. Connection string is correct");
     process.exit(1);
   });
 
@@ -52,7 +60,7 @@ io.on("connection", (socket) => {
 
 
   socket.on("edit-document", async ({ documentId, content }) => {
-    console.log("Received content update:", content);
+    console.log("BAckend Received content update:", content);
   
     try {
       // Fetch the document from the database

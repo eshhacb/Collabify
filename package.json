@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "concurrently \"npm run dev --prefix api-gateway\" \"npm run dev --prefix backend/auth-service\" \"npm run dev --prefix backend/collaboration-service\" \"npm run dev --prefix backend/ai-suggestions-service\" \"npm run dev --prefix frontend\""
+    "dev": "concurrently \"npm run dev --prefix api-gateway\" \"npm run dev --prefix backend/auth-service\" \"npm run dev --prefix backend/collaboration-service\" \"npm run dev --prefix backend/ai-suggestions-service\"  \"npm run dev --prefix backend/document-service\" \"npm run dev --prefix frontend\""
   },
   "author": "",
   "license": "ISC",

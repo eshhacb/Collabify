@@ -1,13 +1,14 @@
 import React,{useEffect,useState} from "react";
 import { createNewDocument,getAllDocuments } from "../../api/documentService";
 import DocumentCard from "./DocumentCard";
-
+import { useNavigate } from "react-router-dom";
 
 
 const DocumentPage = () => {
     const [documents, setDocuments] = useState([]);
     const [showPopup, setShowPopup] = useState(false);
     const [newTitle, setNewTitle] = useState("");
+    const navigate = useNavigate();
   
     useEffect(() => {
       loadDocuments();
@@ -29,9 +30,10 @@ const DocumentPage = () => {
       }
       try {
         const newDoc = await createNewDocument(newTitle);
-        setDocuments([...documents, newDoc]);
         setShowPopup(false);
         setNewTitle(""); // Reset input field
+        // Redirect to the collaboration/editor page for the new document
+        navigate(`/collaborate/${newDoc.id}`);
       } catch (error) {
         console.error("Error creating document:", error);
       }

@@ -52,13 +52,18 @@ const CustomEditor = ({ value, onChange }) => {
       saveCursorPosition();
       editorRef.current.innerHTML = value;
       restoreCursorPosition();
+
+       // Manually trigger input to ensure AI changes propagate
+       const event = new Event("input", { bubbles: true });
+       editorRef.current.dispatchEvent(event);//dispatches (fires) the event on editorRef.current
     }
   }, [value]);
 
   const handleInput = () => {
     if (editorRef.current) {
       saveCursorPosition();
-      onChange(editorRef.current.innerHTML);
+      console.log("CustomEditor onInput triggered with value:", editorRef.current.innerHTML);
+      onChange(editorRef.current.innerHTML); 
     }
   };
 
