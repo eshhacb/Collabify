@@ -13,12 +13,18 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: ["http://localhost:5173", "http://localhost:3000"],
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 mongoose
@@ -51,10 +57,14 @@ io.on("connection", (socket) => {
 
     let document = await Document.findById(documentId);
     if (!document) {
-      document = await Document.create({ _id: documentId, content: "", history: [] });
+      document = await Document.findOneAndUpdate(
+        { _id: documentId },
+        { $setOnInsert: { doc_id: documentId, content: "" } },
+        { upsert: true, new: true }
+      );
     }
 
-    socket.emit("load-document", { content: document.content, version: document.lastUpdated });
+    socket.emit("load-document", { content: document.content, updated_at: document.updated_at });
     console.log(`User joined document ${documentId}`);
   });
 
@@ -64,7 +74,7 @@ io.on("connection", (socket) => {
   
     try {
       // Fetch the document from the database
-      let document = await Document.findById({_id: documentId});
+      let document = await Document.findById(documentId);
   
       if (!document) {
         console.log("Document not found:", documentId);

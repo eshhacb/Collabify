@@ -1,6 +1,9 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
+// PostgreSQL: documents table
+// Columns: id | title | owner_id | created_at
+// Note: No hard FK to users table to avoid cross-service dependency during sync.
 const Document = sequelize.define(
   "Document",
   {
@@ -13,12 +16,18 @@ const Document = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-   
+    ownerId: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: "owner_id",
+    },
   },
   {
-    tableName: "Document", // ✅ Prevents Sequelize from pluralizing
-    timestamps: true, // ✅ Adds createdAt & updatedAt
-    paranoid: true, // ✅ Enables soft deletes (deletedAt field)
+    tableName: "documents",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
+    indexes: [{ fields: ["owner_id"] }],
   }
 );
 

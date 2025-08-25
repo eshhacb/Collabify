@@ -5,28 +5,27 @@ export const getDocument = async (req, res) => {
   let document = await Document.findById(id);
 
   if (!document) {
-    document = await Document.create({ _id: id, content: "", history: [] });
+    document = await Document.findOneAndUpdate(
+      { _id: id },
+      { $setOnInsert: { doc_id: id, content: "" } },
+      { upsert: true, new: true }
+    );
   }
 
-  res.json({ content: document.content, version: document.lastUpdated });
+  res.json({ content: document.content, updated_at: document.updated_at });
 };
 
 export const saveDocument = async (req, res) => {
   const { id } = req.params;
-  const { content, operation } = req.body;
+  const { content } = req.body;
 
   let document = await Document.findById(id);
   if (!document) {
     return res.status(404).json({ error: "Document not found" });
   }
 
-  if (operation) {
-    document.history.push(operation); // Store operation for undo
-  }
-
   document.content = content;
-  document.lastUpdated = new Date();
-  await document.save(); //saves in the mongodb db
+  await document.save();
 
-  res.json({ message: "Document saved successfully" });
+  res.json({ message: "Document saved successfully", updated_at: document.updated_at });
 };

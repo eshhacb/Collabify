@@ -10,55 +10,40 @@ dotenv.config();
 export const createDocument = async (req, res) => {
   try {
     const { title } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.userId; // comes from auth service token
 
-    // ✅ Generate a UUID as a string
+    // Generate a UUID as a string
     const documentId = uuidv4();
-    console.log("Generated Document ID:", documentId);
 
-    // ✅ Convert UUID string to Sequelize UUID format
-    // const formattedDocumentId = Sequelize.UUIDV4;
-
-    // ✅ Create a new document in PostgreSQL (Sequelize will accept UUID)
+    // Create a new document in PostgreSQL with owner
     const document = await Document.create({
-      id: documentId, // Use manually generated UUID
+      id: documentId,
       title,
+      ownerId: userId,
     });
 
-    // ✅ Ensure the document was created successfully
     if (!document || !document.id) {
-      throw new Error("❌ Document ID is undefined after creation.");
+      throw new Error("Document ID is undefined after creation.");
     }
 
-    console.log("✅ Document Created:", document);
-
-    // ✅ Assign Admin role to the document creator
-    const userDoc = await UserDocument.create({
+    // Assign Admin role to the document creator
+    await UserDocument.create({
       userId,
-      documentId: document.id, // Use UUID
+      documentId: document.id,
       role: "admin",
+      invitedBy: null,
     });
 
-    console.log("✅ UserDocument Created:", userDoc);
+    // Inform Collaboration Service (optional; service can lazily create)
+    try {
+      await axios.post(`http://localhost:8000/api/collaboration/${document.id}`, {
+        content: "",
+      });
+    } catch {}
 
-    // ✅ Send document ID to MongoDB Collaboration Service
-    console.log(process.env.COLLAB_SERVICE_URL)
-    console.log(document.id)
-   
-    await axios.post(`http://localhost:8000/api/collaboration/create-MongoDocument`, {
-      documentId: document.id.toString(),
-    });
-
-    res.status(201).json({
-      message: "Document created successfully",
-      document,
-    });
+    res.status(201).json({ message: "Document created successfully", document });
   } catch (error) {
-    
-    res.status(500).json({
-      message: "Error creating document",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Error creating document", error: error.message });
   }
 };
 

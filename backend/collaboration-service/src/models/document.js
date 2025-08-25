@@ -1,31 +1,14 @@
 import mongoose from "mongoose";
 
-const documentSchema = new mongoose.Schema({
-  _id:{
-    type:String,
-    required:true
-  }, 
-  content:{
-    type:String,
-    default:"",
+// MongoDB: collaborative document content
+// Fields: id (_id) | doc_id | content | updated_at
+const documentSchema = new mongoose.Schema(
+  {
+    _id: { type: String, required: true }, // same as Postgres document.id (UUID)
+    doc_id: { type: String, required: true, index: true }, // duplicate for explicit field as requested
+    content: { type: String, default: "" },
   },
-  // title:{
-  //   type:String,
-  //   default:"",
-  //   required:true,
-  // },
-  history: [
-    {
-      type: { type: String, enum: ["insert", "delete"], required:true },
-      index:{type: Number, required: true },
-      text: { type: String, default: "" },
-      length: { type: Number, required: function () { return this.type === "delete"; } }
-    },
-  ],
-  lastUpdated: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: { createdAt: false, updatedAt: "updated_at" } }
+);
 
 export default mongoose.model("Document", documentSchema);

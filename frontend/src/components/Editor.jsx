@@ -6,10 +6,10 @@ import axios from "axios";
 import { debounce } from "lodash";
 import CustomEditor from "./CustomEditor"; 
 
-const API_BASE_URL = 'http://localhost:8000';
-console.log("this is api base url ",API_BASE_URL);
-// initialized api connectijn to backend
-const socket = io(API_BASE_URL, { transports: ["websocket"] });
+const API_BASE_URL = import.meta.env.VITE_COLLAB_BASE_URL || 'http://localhost:8000';
+console.log("Collab API base:", API_BASE_URL);
+// Initialize socket with websocket + polling fallback
+const socket = io(API_BASE_URL, { transports: ["websocket", "polling"] });
 
 const Editor = ({ documentId, onContentChange, externalContent  }) => {
   const [content, setContent] = useState("");
@@ -29,7 +29,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     socket.on("document-updated", handleDocumentUpdate);
 
     axios
-      .get(`${API_BASE_URL}/api/collaboration/${documentId}`)
+      .get(`${API_BASE_URL}/api/collaboration/${documentId}`, { withCredentials: false })
       .then((res) => {
         setContent(res.data.content || "");
         setDocumentTitle(res.data.title || "Untitled Document");
