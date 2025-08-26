@@ -9,8 +9,10 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      await loginUser({ email, password });
-
+      const res = await loginUser({ email, password });
+      if (res?.data?.token) {
+        localStorage.setItem("token", res.data.token);
+      }
       navigate("/documents");
     } catch (error) {
       console.error("Login failed:", error.response?.data?.message || error.message);

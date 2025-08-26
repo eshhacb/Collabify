@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid"; // Import UUID Generator
 import axios from "axios";
 import dotenv from "dotenv";
 import sequelize from "../config/db.js"; // Sequelize instance for transactions
+import { sendDocumentInvitation, getDocumentInvitations, cancelDocumentInvitation } from "../utils/invitationService.js";
 
 dotenv.config();
 
@@ -91,11 +92,255 @@ export const createDocument = async (req, res) => {
   }
 };
 
+// RBAC-aware: return only documents current user has any role on and include that role
 export const getAllDocuments = async (req, res) => {
   try {
-    const documents = await Document.findAll();
-    res.json({ documents });
+    const userId = req.user.userId;
+
+    const documents = await Document.findAll({
+      include: [
+        {
+          model: UserDocument,
+          where: { userId },
+          attributes: ["role"], // include the user's role on this document
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    // Flatten user's role for convenience
+    const result = documents.map((doc) => {
+      const json = doc.toJSON();
+      const role = json.UserDocuments?.[0]?.role || json.UserDocument?.role || null;
+      delete json.UserDocuments;
+      delete json.UserDocument;
+      return { ...json, userRole: role };
+    });
+
+    return res.json({ documents: result });
   } catch (error) {
-    res.status(500).json({ message: "Error retrieving documents", error });
+    return res.status(500).json({ message: "Error retrieving documents", error: error.message });
+  }
+};
+
+// GET single document (viewer/editor/admin) – include current user's role
+export const getDocumentById = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.userId;
+
+    const document = await Document.findByPk(documentId);
+    if (!document) return res.status(404).json({ message: "Document not found" });
+
+    const membership = await UserDocument.findOne({ where: { documentId, userId } });
+    const userRole = membership?.role || null;
+
+    return res.json({ document, userRole });
+  } catch (error) {
+    return res.status(500).json({ message: "Error retrieving document", error: error.message });
+  }
+};
+
+// UPDATE document metadata (editor/admin)
+export const updateDocument = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { title } = req.body;
+
+    if (!title || typeof title !== "string") {
+      return res.status(400).json({ message: "Invalid payload: 'title' is required" });
+    }
+
+    const document = await Document.findByPk(documentId);
+    if (!document) return res.status(404).json({ message: "Document not found" });
+
+    document.title = title;
+    await document.save();
+    return res.json({ message: "Document updated", document });
+  } catch (error) {
+    return res.status(500).json({ message: "Error updating document", error: error.message });
+  }
+};
+
+// DELETE document (admin)
+export const deleteDocument = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+
+    const deleted = await Document.destroy({ where: { id: documentId } });
+    if (!deleted) return res.status(404).json({ message: "Document not found" });
+
+    // Note: UserDocument rows cascade via model definition
+    return res.json({ message: "Document deleted" });
+  } catch (error) {
+    return res.status(500).json({ message: "Error deleting document", error: error.message });
+  }
+};
+
+const VALID_ROLES = ["viewer", "editor", "admin"];
+
+// ADD collaborator (admin)
+export const addCollaborator = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { userId: targetUserId, role } = req.body;
+    const inviterId = req.user.userId;
+
+    if (!targetUserId || !role) {
+      return res.status(400).json({ message: "'userId' and 'role' are required" });
+    }
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: `Invalid role. Allowed: ${VALID_ROLES.join(", ")}` });
+    }
+
+    const existing = await UserDocument.findOne({ where: { userId: targetUserId, documentId } });
+    if (existing) {
+      return res.status(409).json({ message: "User already a collaborator on this document" });
+    }
+
+    const created = await UserDocument.create({
+      userId: targetUserId,
+      documentId,
+      role,
+      invitedBy: inviterId,
+    });
+
+    return res.status(201).json({ message: "Collaborator added", collaborator: created });
+  } catch (error) {
+    return res.status(500).json({ message: "Error adding collaborator", error: error.message });
+  }
+};
+
+// UPDATE collaborator role (admin)
+export const updateCollaboratorRole = async (req, res) => {
+  try {
+    const { documentId, userId } = req.params; // userId of the collaborator to update
+    const { role } = req.body;
+
+    if (!role || !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: `Invalid role. Allowed: ${VALID_ROLES.join(", ")}` });
+    }
+
+    const userDoc = await UserDocument.findOne({ where: { documentId, userId } });
+    if (!userDoc) return res.status(404).json({ message: "Collaborator not found for this document" });
+
+    // Prevent demoting the last admin
+    if (userDoc.role === "admin" && role !== "admin") {
+      const adminCount = await UserDocument.count({ where: { documentId, role: "admin" } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: "Cannot demote the last admin of the document" });
+      }
+    }
+
+    userDoc.role = role;
+    await userDoc.save();
+    return res.json({ message: "Collaborator role updated", collaborator: userDoc });
+  } catch (error) {
+    return res.status(500).json({ message: "Error updating collaborator role", error: error.message });
+  }
+};
+
+// REMOVE collaborator (admin)
+export const removeCollaborator = async (req, res) => {
+  try {
+    const { documentId, userId } = req.params; // userId of the collaborator to remove
+
+    const userDoc = await UserDocument.findOne({ where: { documentId, userId } });
+    if (!userDoc) return res.status(404).json({ message: "Collaborator not found for this document" });
+
+    // Prevent removing the last admin
+    if (userDoc.role === "admin") {
+      const adminCount = await UserDocument.count({ where: { documentId, role: "admin" } });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: "Cannot remove the last admin of the document" });
+      }
+    }
+
+    await userDoc.destroy();
+    return res.json({ message: "Collaborator removed" });
+  } catch (error) {
+    return res.status(500).json({ message: "Error removing collaborator", error: error.message });
+  }
+};
+
+// SEND invitation (admin/editor)
+export const sendInvitation = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const { email, role } = req.body;
+    const inviterId = req.user.userId;
+
+    // Validate role
+    if (!['viewer', 'editor'].includes(role)) {
+      return res.status(400).json({ message: "Invalid role. Allowed roles: viewer, editor" });
+    }
+
+    // Get document details
+    const document = await Document.findByPk(documentId);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Get inviter's name (you might want to get this from auth service)
+    const inviterName = req.user.name || req.user.email || 'Unknown User';
+
+    // Send invitation via notification service
+    const invitationData = {
+      email,
+      documentId,
+      documentTitle: document.title,
+      role,
+      invitedBy: inviterId,
+      invitedByName: inviterName
+    };
+
+    const result = await sendDocumentInvitation(invitationData);
+
+    return res.status(201).json({
+      message: "Invitation sent successfully",
+      invitation: result.invitation
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      message: "Error sending invitation", 
+      error: error.message 
+    });
+  }
+};
+
+// GET invitations for document (admin/editor)
+export const getInvitations = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+
+    const result = await getDocumentInvitations(documentId);
+
+    return res.json({
+      invitations: result.invitations
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      message: "Error getting invitations", 
+      error: error.message 
+    });
+  }
+};
+
+// CANCEL invitation (admin/editor)
+export const cancelInvitation = async (req, res) => {
+  try {
+    const { invitationId } = req.params;
+
+    await cancelDocumentInvitation(invitationId);
+
+    return res.json({ message: "Invitation cancelled successfully" });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      message: "Error cancelling invitation", 
+      error: error.message 
+    });
   }
 };

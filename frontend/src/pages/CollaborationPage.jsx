@@ -1,75 +1,150 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Editor from "../components/Editor";
 import Sidebar from "../components/Sidebar";
 import { useParams } from "react-router-dom";
 import AISuggestionModal from "../components/AISuggestionModal";
+import InviteModal from "../components/InviteModal";
+import InvitationsList from "../components/InvitationsList";
 import axios from "axios";
-
+import { getDocumentById } from "../api/documentService";
+import { Mail, Users } from "lucide-react";
+import { config } from "../config.js";
 
 const CollaborationPage = () => {
-    const { documentId } = useParams();
-    console.log("this is documentID",documentId);
-    const [showModal, setShowModal] = useState(false);
-    const [suggestion, setSuggestion] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [documentContent, setDocumentContent] = useState(""); 
+  const { documentId } = useParams();
+  const [showModal, setShowModal] = useState(false);
+  const [suggestion, setSuggestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [documentContent, setDocumentContent] = useState("");
+  const [userRole, setUserRole] = useState(null);
+  const [document, setDocument] = useState(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInvitationsList, setShowInvitationsList] = useState(false);
 
-    const handleAISuggestion = async () => {
-      console.log("Sending documentContent to backend:", documentContent); // Debugging
+  useEffect(() => {
+    if (!documentId) return;
+    getDocumentById(documentId)
+      .then(({ document, userRole }) => {
+        setDocument(document);
+        setUserRole(userRole);
+      })
+      .catch(() => {
+        setDocument(null);
+        setUserRole(null);
+      });
+  }, [documentId]);
 
-      setLoading(true);  //set loading indicator
-      try {
-          const response = await axios.post("http://localhost:7000/api/ai-suggestion", {
-              documentText:documentContent,
-          });
-          setSuggestion(response.data.suggestion);  // Store AI suggestion
-          setShowModal(true); // Show suggestion modal
-      } catch (error) {
-          console.error("Error getting AI suggestion:", error);
-      } finally {
-          setLoading(false);
-      }
+  const handleAISuggestion = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${config.API_URL}/api/ai-suggestion`, {
+        documentText: documentContent,
+      });
+      setSuggestion(response.data.suggestion);
+      setShowModal(true);
+    } catch (error) {
+      console.error("Error getting AI suggestion:", error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handleContentChange = (newContent) => {
-    setDocumentContent(newContent); // Update state when content changes
-};
-
-const applySuggestion = () => {
-  console.log("Before applying suggestion",suggestion)
-  setDocumentContent(suggestion);
-  console.log("Before applying suggestion",documentContent);
-  //debug
-  setTimeout(() => {
-    console.log("After applying suggestion:", documentContent);
-  }, 1000); // Check if state updates properly
-
-  setShowModal(false);
-
-};
-
 
   return (
     <div className="flex">
       <Sidebar />
       <div className="flex-1 p-6 bg-gray-100">
-        <h1 className="text-4xl font-semibold mb-6">Collaborate on Document</h1>
-        <button 
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition mb-4"
-                    onClick={handleAISuggestion}
-                    disabled={loading}
-                >
-                    {loading ? "Generating..." : "Get AI Suggestion"}
-                </button>
-        <Editor documentId={documentId} externalContent={documentContent} onContentChange={setDocumentContent}/>
-        {showModal && (
-                    <AISuggestionModal 
-                        suggestion={suggestion} 
-                        onClose={() => setShowModal(false)} 
-                        onAdd={applySuggestion} 
-                    />
-                )}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-semibold">
+              {document?.title || 'Collaborate on Document'}
+            </h1>
+            {userRole && (
+              <span className={`inline-block mt-2 text-sm px-2 py-1 rounded ${
+                userRole === 'admin' ? 'bg-purple-100 text-purple-700' :
+                userRole === 'editor' ? 'bg-blue-100 text-blue-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                Role: {userRole}
+              </span>
+            )}
+          </div>
+          
+          {/* Invite and Collaboration Actions */}
+          {(userRole === 'admin' || userRole === 'editor') && (
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Invite</span>
+              </button>
+              
+              <button
+                onClick={() => setShowInvitationsList(!showInvitationsList)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                <span>Invitations</span>
+              </button>
+            </div>
+          )}
+        </div>
 
+        {/* Invitations List */}
+        {showInvitationsList && (userRole === 'admin' || userRole === 'editor') && (
+          <div className="mb-6">
+            <InvitationsList 
+              documentId={documentId} 
+              userRole={userRole}
+            />
+          </div>
+        )}
+
+        {(userRole === 'editor' || userRole === 'admin') && (
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition mb-4"
+            onClick={handleAISuggestion}
+            disabled={loading}
+          >
+            {loading ? "Generating..." : "Get AI Suggestion"}
+          </button>
+        )}
+
+        <Editor
+          documentId={documentId}
+          externalContent={documentContent}
+          onContentChange={setDocumentContent}
+        />
+
+        {/* Invite Modal */}
+        {showInviteModal && (
+          <InviteModal
+            isOpen={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            documentId={documentId}
+            documentTitle={document?.title || 'Untitled Document'}
+            onInviteSent={() => {
+              // Refresh invitations list if it's open
+              if (showInvitationsList) {
+                // This will trigger a re-render of InvitationsList
+                setShowInvitationsList(false);
+                setTimeout(() => setShowInvitationsList(true), 100);
+              }
+            }}
+          />
+        )}
+
+        {showModal && (
+          <AISuggestionModal
+            suggestion={suggestion}
+            onClose={() => setShowModal(false)}
+            onAdd={() => {
+              setDocumentContent(suggestion);
+              setShowModal(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

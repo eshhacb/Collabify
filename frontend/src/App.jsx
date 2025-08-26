@@ -3,6 +3,7 @@ import Signup from "./pages/Signup";
 import CollaborationPage from "./pages/CollaborationPage";
 import Login from "./pages/Login";
 import DocumentPage from "./pages/document/DocumentPage";
+import InvitationAccept from "./pages/InvitationAccept";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/collaborate/:documentId" element={<CollaborationPage />} />
         <Route path="/documents" element={<DocumentPage />} />
+        <Route path="/invitation/accept/:token" element={<InvitationAccept />} />
       </Routes>
    
   );

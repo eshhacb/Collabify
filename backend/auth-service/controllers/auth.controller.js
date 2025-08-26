@@ -50,3 +50,88 @@ export const logout = async (req, res) => {
   res.clearCookie("token", { httpOnly: true, sameSite: "Strict" });
   res.json({ message: "Logged out successfully" });
 };
+
+export const acceptInvitation = async (req, res) => {
+  try {
+    const { invitationToken, userData } = req.body;
+
+    if (!invitationToken) {
+      return res.status(400).json({ message: "Invitation token is required" });
+    }
+
+    // Get invitation details from notification service
+    const notificationServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5004';
+    
+    const invitationResponse = await fetch(`${notificationServiceUrl}/api/invitations/token/${invitationToken}`);
+    const invitationData = await invitationResponse.json();
+
+    if (!invitationResponse.ok) {
+      return res.status(400).json({ message: invitationData.message || "Invalid invitation" });
+    }
+
+    const invitation = invitationData.invitation;
+
+    // Check if user already exists
+    let user = await User.findOne({ where: { email: invitation.email } });
+
+    if (!user) {
+      // Create new user if they don't exist
+      if (!userData || !userData.name || !userData.password) {
+        return res.status(400).json({ 
+          message: "User account required", 
+          requiresRegistration: true,
+          email: invitation.email 
+        });
+      }
+
+      // Check if email matches invitation
+      if (userData.email !== invitation.email) {
+        return res.status(400).json({ message: "Email must match invitation" });
+      }
+
+      // Create new user
+      user = await User.create({ 
+        name: userData.name, 
+        email: userData.email, 
+        passwordHash: userData.password 
+      });
+    }
+
+    // Accept the invitation
+    const acceptResponse = await fetch(`${notificationServiceUrl}/api/invitations/accept/${invitationToken}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userId: user.id })
+    });
+
+    if (!acceptResponse.ok) {
+      return res.status(400).json({ message: "Failed to accept invitation" });
+    }
+
+    // Add user to document (this would be handled by document service)
+    // For now, we'll just return success
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 60 * 60 * 1000,
+    });
+
+    res.json({ 
+      message: "Invitation accepted successfully", 
+      token, 
+      user,
+      documentId: invitation.documentId,
+      role: invitation.role
+    });
+
+  } catch (error) {
+    console.error('Error accepting invitation:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
