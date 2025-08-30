@@ -1,16 +1,21 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import Card from "@mui/material/Card";
+import CardActionArea from "@mui/material/CardActionArea";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Stack from "@mui/material/Stack";
 
-const roleBadgeClass = (role) => {
+const roleColor = (role) => {
   switch (role) {
     case "admin":
-      return "bg-purple-100 text-purple-700";
+      return "secondary";
     case "editor":
-      return "bg-blue-100 text-blue-700";
+      return "primary";
     case "viewer":
-      return "bg-gray-100 text-gray-700";
     default:
-      return "bg-gray-50 text-gray-600";
+      return "default";
   }
 };
 
@@ -23,24 +28,23 @@ const DocumentCard = ({ document }) => {
   };
 
   return (
-    <div
-      className="relative bg-white shadow-md rounded-lg hover:shadow-lg p-4 flex flex-col justify-between cursor-pointer"
-      style={{ width: "200px", height: "200px" }}
-      onClick={openDoc}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openDoc()}
-    >
-      <div className="flex justify-between items-start">
-        <h3 className="text-lg font-semibold">{document.title}</h3>
-        {document.userRole && (
-          <span className={`text-xs px-2 py-1 rounded ${roleBadgeClass(document.userRole)}`}>
-            {document.userRole}
-          </span>
-        )}
-      </div>
-      <p className="text-gray-500 text-sm text-center">Click to open</p>
-    </div>
+    <Card variant="outlined" sx={{ height: 200 }}>
+      <CardActionArea onClick={openDoc} sx={{ height: "100%" }}>
+        <CardContent sx={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+            <Typography variant="h6" component="div" sx={{ pr: 1 }} noWrap>
+              {document.title}
+            </Typography>
+            {document.userRole && (
+              <Chip size="small" label={document.userRole} color={roleColor(document.userRole)} />
+            )}
+          </Stack>
+          <Typography variant="body2" color="text.secondary" align="center">
+            Click to open
+          </Typography>
+        </CardContent>
+      </CardActionArea>
+    </Card>
   );
 };
 

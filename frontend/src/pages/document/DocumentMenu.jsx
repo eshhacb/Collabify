@@ -1,17 +1,34 @@
 import React, { useState } from "react";
 import { addCollaborator, updateCollaboratorRole, removeCollaborator } from "../../api/documentService";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
-// Simple menu that expects admin usage; hide/show based on user's role in parent
+// Admin-only menu for collaborator management
 const DocumentMenu = ({ documentId, currentUserRole }) => {
-  const [open, setOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [addUserId, setAddUserId] = useState("");
+  const [changeUserId, setChangeUserId] = useState("");
+  const [removeUserId, setRemoveUserId] = useState("");
+  const open = Boolean(anchorEl);
 
   const isAdmin = currentUserRole === "admin";
+  if (!isAdmin) return null;
+
+  const handleOpen = (e) => setAnchorEl(e.currentTarget);
+  const handleClose = () => setAnchorEl(null);
 
   const handleChangeRole = async (targetUserId, newRole) => {
-    if (!isAdmin) return;
     try {
       await updateCollaboratorRole(documentId, targetUserId, newRole);
-      setOpen(false);
+      setChangeUserId("");
+      handleClose();
     } catch (e) {
       console.error("Failed to update role:", e);
       alert(e?.response?.data?.message || "Failed to update role");
@@ -19,84 +36,57 @@ const DocumentMenu = ({ documentId, currentUserRole }) => {
   };
 
   const handleAddCollaborator = async (targetUserId, role) => {
-    if (!isAdmin) return;
     try {
       await addCollaborator(documentId, { userId: targetUserId, role });
-      setOpen(false);
+      setAddUserId("");
+      handleClose();
     } catch (e) {
       console.error("Failed to add collaborator:", e);
       alert(e?.response?.data?.message || "Failed to add collaborator");
     }
   };
 
-  const handleRemoveCollaborator = async (targetUserId) => {
-    if (!isAdmin) return;
+  const handleRemove = async (targetUserId) => {
     try {
       await removeCollaborator(documentId, targetUserId);
-      setOpen(false);
+      setRemoveUserId("");
+      handleClose();
     } catch (e) {
       console.error("Failed to remove collaborator:", e);
       alert(e?.response?.data?.message || "Failed to remove collaborator");
     }
   };
 
-  if (!isAdmin) return null; // Only admins see menu
-
   return (
-    <div className="relative">
-      <button onClick={() => setOpen(!open)} className="text-gray-600 text-lg">⋮</button>
-      {open && (
-        <div className="absolute right-0 bg-white shadow-md rounded-lg p-2 w-64">
-          <div className="text-sm text-gray-700 mb-2">Collaborator Management</div>
-          {/* In a real app, replace inputs with a user picker */}
-          <div className="flex gap-2 mb-2">
-            <input id="user-id-input" className="border rounded p-1 flex-1" placeholder="User ID" />
-            <button
-              className="px-2 py-1 bg-green-500 text-white rounded"
-              onClick={() => {
-                const id = document.getElementById('user-id-input').value;
-                handleAddCollaborator(id, 'viewer');
-              }}
-            >
+    <>
+      <Tooltip title="Manage collaborators">
+        <IconButton size="small" onClick={handleOpen} aria-label="open document menu">
+          <MoreVertIcon />
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchorEl} open={open} onClose={handleClose} keepMounted>
+        <Stack spacing={1} sx={{ p: 2, pt: 1.5, width: 300 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField size="small" label="User ID" value={addUserId} onChange={(e) => setAddUserId(e.target.value)} fullWidth />
+            <Button size="small" variant="contained" onClick={() => handleAddCollaborator(addUserId, "viewer")}>
               Add Viewer
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <input id="user-id-change" className="border rounded p-1 flex-1" placeholder="User ID" />
-            <button
-              className="px-2 py-1 bg-blue-500 text-white rounded"
-              onClick={() => {
-                const id = document.getElementById('user-id-change').value;
-                handleChangeRole(id, 'editor');
-              }}
-            >
-              Make Editor
-            </button>
-            <button
-              className="px-2 py-1 bg-purple-500 text-white rounded"
-              onClick={() => {
-                const id = document.getElementById('user-id-change').value;
-                handleChangeRole(id, 'admin');
-              }}
-            >
-              Make Admin
-            </button>
-          </div>
-          <div className="flex gap-2 mt-2">
-            <input id="user-id-remove" className="border rounded p-1 flex-1" placeholder="User ID" />
-            <button
-              className="px-2 py-1 bg-red-500 text-white rounded"
-              onClick={() => {
-                const id = document.getElementById('user-id-remove').value;
-                handleRemoveCollaborator(id);
-              }}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+            </Button>
+          </Stack>
+          <Divider />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField size="small" label="User ID" value={changeUserId} onChange={(e) => setChangeUserId(e.target.value)} fullWidth />
+            <Button size="small" variant="outlined" onClick={() => handleChangeRole(changeUserId, "editor")}>Make Editor</Button>
+            <Button size="small" variant="outlined" onClick={() => handleChangeRole(changeUserId, "admin")}>Make Admin</Button>
+          </Stack>
+          <Divider />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField size="small" label="User ID" value={removeUserId} onChange={(e) => setRemoveUserId(e.target.value)} fullWidth />
+            <Button size="small" color="error" variant="outlined" onClick={() => handleRemove(removeUserId)}>Remove</Button>
+          </Stack>
+        </Stack>
+        <MenuItem onClick={handleClose} sx={{ display: "none" }}>close</MenuItem>
+      </Menu>
+    </>
   );
 };
 

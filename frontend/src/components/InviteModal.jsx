@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { X, Mail, User, Shield } from 'lucide-react';
 import { config } from '../config.js';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 
 const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent }) => {
   const [email, setEmail] = useState('');
@@ -8,6 +19,7 @@ const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [conflictInvitationId, setConflictInvitationId] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +31,6 @@ const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent 
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
@@ -29,7 +40,6 @@ const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent 
     setIsLoading(true);
 
     try {
-      // Use cookie set by login; also attach Authorization if available
       const token = localStorage.getItem('token');
       const response = await fetch(`${config.API_URL}/api/documents/${documentId}/invitations`, {
         method: 'POST',
@@ -44,20 +54,37 @@ const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent 
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 409) {
+          // Invitation already exists; surface clearer message and enable Resend option
+          setError('An invitation for this email already exists for this document.');
+          // Try to find the existing invitation id for convenience
+          try {
+            const listRes = await fetch(`${config.API_URL}/api/documents/${documentId}/invitations`, {
+              headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              },
+              credentials: 'include'
+            });
+            const listData = await listRes.json();
+            if (listRes.ok && Array.isArray(listData.invitations)) {
+              const match = listData.invitations.find(inv => inv.email?.toLowerCase() === email.trim().toLowerCase() && inv.status === 'pending');
+              if (match?.id) setConflictInvitationId(match.id);
+            }
+          } catch (_) {}
+          return;
+        }
         throw new Error(data.message || 'Failed to send invitation');
       }
 
       setSuccess('Invitation sent successfully!');
       setEmail('');
       setRole('viewer');
-      
       if (onInviteSent) onInviteSent();
 
       setTimeout(() => {
         onClose();
         setSuccess('');
       }, 2000);
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -75,113 +102,114 @@ const InviteModal = ({ isOpen, onClose, documentId, documentTitle, onInviteSent 
     }
   };
 
-  if (!isOpen) return null;
+  const handleResend = async () => {
+    const token = localStorage.getItem('token');
+    setIsLoading(true);
+    try {
+      let existingId = conflictInvitationId;
+      if (!existingId) {
+        const listRes = await fetch(`${config.API_URL}/api/documents/${documentId}/invitations`, {
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include'
+        });
+        const listData = await listRes.json();
+        if (listRes.ok && Array.isArray(listData.invitations)) {
+          const match = listData.invitations.find(inv => inv.email?.toLowerCase() === email.trim().toLowerCase() && inv.status === 'pending');
+          if (match?.id) existingId = match.id;
+        }
+      }
+      if (existingId) {
+        await fetch(`${config.API_URL}/api/documents/invitations/${existingId}`, {
+          method: 'DELETE',
+          headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include'
+        });
+      }
+      // retry send
+      setConflictInvitationId(null);
+      setError('');
+      await handleSubmit(new Event('submit'));
+    } catch (e) {
+      setError(e.message || 'Failed to resend invitation');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center space-x-3">
-            <Mail className="w-6 h-6 text-indigo-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Send Invitation</h2>
-          </div>
-          <button
-            onClick={handleClose}
-            disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Document</h3>
-            <p className="text-gray-900 font-medium">{documentTitle}</p>
+    <Dialog open={isOpen} onClose={handleClose} fullWidth maxWidth="sm">
+      <DialogTitle>Send Invitation</DialogTitle>
+      <DialogContent>
+        <Stack spacing={3} sx={{ mt: 1 }}>
+          <div>
+            <InputLabel shrink>Document</InputLabel>
+            <div style={{ fontWeight: 500 }}>{documentTitle}</div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email address"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
+          {error && (
+            <Alert
+              severity="error"
+              action={
+                conflictInvitationId ? (
+                  <Button color="inherit" size="small" onClick={handleResend} disabled={isLoading}>
+                    Cancel existing & Resend
+                  </Button>
+                ) : null
+              }
+            >
+              {error}
+            </Alert>
+          )}
+          {success && <Alert severity="success">{success}</Alert>}
 
-            {/* Role Selection */}
-            <div>
-              <label htmlFor="role" className="block text_sm font-medium text-gray-700 mb-2">
-                Role
-              </label>
-              <div className="relative">
-                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <select
-                  id="role"
+          <form onSubmit={handleSubmit} id="invite-form">
+            <Stack spacing={3}>
+              <TextField
+                label="Email Address"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter email address"
+                disabled={isLoading}
+                required
+                fullWidth
+              />
+
+              <FormControl fullWidth>
+                <InputLabel id="role-label">Role</InputLabel>
+                <Select
+                  labelId="role-label"
                   value={role}
+                  label="Role"
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none bg-white"
                   disabled={isLoading}
                 >
-                  <option value="viewer">Viewer - Can view the document</option>
-                  <option value="editor">Editor - Can view and edit the document</option>
-                </select>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                {success}
-              </div>
-            )}
-
-            <div className="flex space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isLoading}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Sending...
-                  </>
-                ) : (
-                  'Send Invitation'
-                )}
-              </button>
-            </div>
+                  <MenuItem value="viewer">Viewer - Can view the document</MenuItem>
+                  <MenuItem value="editor">Editor - Can view and edit the document</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
           </form>
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} disabled={isLoading} variant="outlined">
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          form="invite-form"
+          disabled={isLoading}
+          variant="contained"
+        >
+          {isLoading ? 'Sending...' : 'Send Invitation'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 

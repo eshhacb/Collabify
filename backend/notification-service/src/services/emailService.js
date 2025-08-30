@@ -5,14 +5,28 @@ dotenv.config();
 
 // Create transporter
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  // Gmail fallback if provided
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+
+  // Generic SMTP
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false otherwise
+    auth: process.env.SMTP_USER
+      ? {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        }
+      : undefined,
   });
 };
 
@@ -77,7 +91,10 @@ const createInvitationEmailTemplate = (invitation, acceptUrl) => {
 export const sendInvitationEmail = async (invitation, acceptUrl) => {
   try {
     // Check if SMTP is configured
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    // If neither SMTP nor Gmail is configured, log dev output
+    const smtpConfigured = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+    const gmailConfigured = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+    if (!smtpConfigured && !gmailConfigured) {
       console.log('SMTP not configured, logging invitation details for development:');
       console.log('=== INVITATION EMAIL (Development Mode) ===');
       console.log(`To: ${invitation.email}`);
@@ -89,8 +106,9 @@ export const sendInvitationEmail = async (invitation, acceptUrl) => {
 
     const transporter = createTransporter();
     
+    const fromAddress = process.env.SMTP_USER || process.env.GMAIL_USER;
     const mailOptions = {
-      from: `"Collabify" <${process.env.SMTP_USER}>`,
+      from: `"Collabify" <${fromAddress}>`,
       to: invitation.email,
       subject: `You've been invited to collaborate on "${invitation.documentTitle}"`,
       html: createInvitationEmailTemplate(invitation, acceptUrl),

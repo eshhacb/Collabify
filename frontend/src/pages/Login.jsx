@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../api/authService";
+import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,29 +26,32 @@ const Login = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-lg p-6 w-96">
-        <h2 className="text-2xl font-semibold text-center mb-4">Login</h2>
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full p-2 mb-3 border rounded"
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-2 mb-3 border rounded"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          onClick={handleLogin}
-        >
+    <Container maxWidth="sm" sx={{ display: "flex", alignItems: "center", minHeight: "100vh" }}>
+      <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
+        <Typography variant="h5" align="center" gutterBottom>
           Login
-        </button>
-      </div>
-    </div>
+        </Typography>
+        <Stack spacing={2}>
+          <TextField
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+          />
+          <Button variant="contained" onClick={handleLogin} fullWidth>
+            Login
+          </Button>
+        </Stack>
+      </Paper>
+    </Container>
   );
 };
 

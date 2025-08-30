@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const CustomEditor = ({ value, onChange, readOnly = false }) => {
+const CustomEditor = ({ value, onChange, readOnly = false, editorId }) => {
   const editorRef = useRef(null); // stores the reference to the editor
   const selectionRef = useRef(null); // reference to the cursor position
 
@@ -73,6 +73,7 @@ const CustomEditor = ({ value, onChange, readOnly = false }) => {
 
   return (
     <div
+      id={editorId}
       ref={editorRef}
       contentEditable={!readOnly}
       className={`w-full h-[80vh] border p-2 rounded-md bg-white shadow-md focus:outline-none ${

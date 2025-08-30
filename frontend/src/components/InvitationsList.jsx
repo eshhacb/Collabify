@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Clock, CheckCircle, XCircle, Trash2, User } from 'lucide-react';
 import { config } from '../config.js';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Stack from '@mui/material/Stack';
+import Chip from '@mui/material/Chip';
+import Avatar from '@mui/material/Avatar';
+import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Alert from '@mui/material/Alert';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PersonIcon from '@mui/icons-material/Person';
 
 const InvitationsList = ({ documentId, userRole }) => {
   const [invitations, setInvitations] = useState([]);
@@ -40,36 +54,28 @@ const InvitationsList = ({ documentId, userRole }) => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_URL}/api/documents/invitations/${invitationId}`, {
+      const response = await fetch(`${config.API_URL}/api/documents/${documentId}/invitations/${invitationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        credentials: 'include'
       });
 
-      const data = await response.json();
+      let data = {};
+      try { data = await response.json(); } catch (_) {}
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to cancel invitation');
+        // Common backend messages:
+        // - 'Can only cancel pending invitations'
+        // - 'Invitation not found'
+        setError(data.message || `Failed to cancel invitation (${response.status})`);
       }
-
-      // Refresh the list
+      // Refresh the list regardless (status might have changed)
       fetchInvitations();
     } catch (err) {
       setError(err.message);
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'accepted':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'expired':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+      fetchInvitations();
     }
   };
 
@@ -86,16 +92,16 @@ const InvitationsList = ({ documentId, userRole }) => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusChipProps = (status) => {
     switch (status) {
       case 'pending':
-        return 'text-yellow-700 bg-yellow-100';
+        return { color: 'warning', icon: <ScheduleIcon /> };
       case 'accepted':
-        return 'text-green-700 bg-green-100';
+        return { color: 'success', icon: <CheckCircleIcon /> };
       case 'expired':
-        return 'text-red-700 bg-red-100';
+        return { color: 'error', icon: <CancelIcon /> };
       default:
-        return 'text-gray-700 bg-gray-100';
+        return { color: 'default', icon: <ScheduleIcon /> };
     }
   };
 
@@ -122,85 +128,61 @@ const InvitationsList = ({ documentId, userRole }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center space-x-2">
-          <Mail className="w-5 h-5 text-gray-600" />
-          <h3 className="text-lg font-medium text-gray-900">Pending Invitations</h3>
-        </div>
-      </div>
+    <Paper variant="outlined">
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+        <MailOutlineIcon fontSize="small" color="action" />
+        <Typography variant="subtitle1">Pending Invitations</Typography>
+      </Stack>
 
-      <div className="p-6">
+      <div style={{ padding: 16 }}>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-            <span className="ml-2 text-gray-600">Loading invitations...</span>
-          </div>
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ py: 2 }}>
+            <CircularProgress size={20} />
+            <Typography color="text.secondary">Loading invitations...</Typography>
+          </Stack>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
+          <Alert severity="error">{error}</Alert>
         ) : invitations.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>No pending invitations</p>
-          </div>
+          <Stack alignItems="center" spacing={1} sx={{ py: 4 }}>
+            <MailOutlineIcon fontSize="large" color="disabled" />
+            <Typography color="text.secondary">No pending invitations</Typography>
+          </Stack>
         ) : (
-          <div className="space-y-4">
+          <Stack spacing={1.5}>
             {invitations.map((invitation) => (
-              <div
-                key={invitation.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center space-x-3 flex-1">
-                  <div className="flex-shrink-0">
-                    <User className="w-8 h-8 text-gray-400" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {invitation.email}
-                      </p>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(invitation.status)}`}>
-                        {getStatusIcon(invitation.status)}
-                        <span className="ml-1">{getStatusText(invitation.status)}</span>
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <span className="capitalize">{invitation.role}</span>
-                      <span>•</span>
-                      <span>Invited by {invitation.invitedByName}</span>
-                      <span>•</span>
-                      <span>{formatDate(invitation.createdAt)}</span>
-                      {invitation.status === 'pending' && (
-                        <>
-                          <span>•</span>
-                          <span className={isExpired(invitation.expiresAt) ? 'text-red-600' : ''}>
-                            Expires {formatDate(invitation.expiresAt)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
+              <Stack key={invitation.id} direction="row" alignItems="center" spacing={2} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <Avatar sx={{ bgcolor: 'background.paper' }}>
+                  <PersonIcon color="disabled" />
+                </Avatar>
+                <Stack flex={1} minWidth={0} spacing={0.5}>
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>{invitation.email}</Typography>
+                    <Chip size="small" {...getStatusChipProps(invitation.status)} label={getStatusText(invitation.status)} />
+                  </Stack>
+                  <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="caption" className="capitalize">{invitation.role}</Typography>
+                    <Typography variant="caption">Invited by {invitation.invitedByName}</Typography>
+                    <Typography variant="caption">{formatDate(invitation.createdAt)}</Typography>
+                    {invitation.status === 'pending' && (
+                      <Typography variant="caption" color={isExpired(invitation.expiresAt) ? 'error' : 'inherit'}>
+                        Expires {formatDate(invitation.expiresAt)}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
                 {invitation.status === 'pending' && (
-                  <button
-                    onClick={() => cancelInvitation(invitation.id)}
-                    className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Cancel invitation"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <Tooltip title="Cancel invitation">
+                    <IconButton onClick={() => cancelInvitation(invitation.id)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 )}
-              </div>
+              </Stack>
             ))}
-          </div>
+          </Stack>
         )}
       </div>
-    </div>
+    </Paper>
   );
 };
 

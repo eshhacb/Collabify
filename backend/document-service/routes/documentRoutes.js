@@ -11,6 +11,7 @@ import {
   sendInvitation,
   getInvitations,
   cancelInvitation,
+  acceptInvitationMembership,
 } from "../controllers/documentController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -81,10 +82,16 @@ router.get(
 );
 
 router.delete(
-  "/invitations/:invitationId",
+  "/:documentId/invitations/:invitationId",
   authenticateToken,
   authorizeRoles("admin", "editor"),
   cancelInvitation
+);
+
+// Internal service endpoint for adding membership after invitation acceptance
+router.post(
+  "/internal/invitations/accept",
+  acceptInvitationMembership
 );
 
 export default router;

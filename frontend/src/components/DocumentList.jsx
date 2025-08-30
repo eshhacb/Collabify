@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 
 const DocumentList = () => {
   const [docId, setDocId] = useState("");
@@ -14,15 +17,16 @@ const DocumentList = () => {
   };
 
   return (
-    <div>
-      <input
-        type="text"
+    <Stack direction="row" spacing={2}>
+      <TextField
+        label="Document ID"
         placeholder="Enter Document ID"
         value={docId}
         onChange={(e) => setDocId(e.target.value)}
+        size="small"
       />
-      <button onClick={openDocument}>Open</button>
-    </div>
+      <Button variant="contained" onClick={openDocument}>Open</Button>
+    </Stack>
   );
 };
 

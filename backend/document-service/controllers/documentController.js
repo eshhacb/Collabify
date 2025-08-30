@@ -344,3 +344,36 @@ export const cancelInvitation = async (req, res) => {
     });
   }
 };
+
+// INTERNAL: Accept invitation and add membership (called by auth-service)
+export const acceptInvitationMembership = async (req, res) => {
+  try {
+    const serviceSecret = process.env.SERVICE_SECRET || "";
+    if ((req.headers["x-service-secret"] || "") !== serviceSecret) {
+      return res.status(401).json({ message: "Unauthorized service request" });
+    }
+
+    const { documentId, userId, role } = req.body;
+    if (!documentId || !userId || !role) {
+      return res.status(400).json({ message: "'documentId', 'userId', and 'role' are required" });
+    }
+    if (!['viewer', 'editor', 'admin'].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const document = await Document.findByPk(documentId);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const existing = await UserDocument.findOne({ where: { userId, documentId } });
+    if (existing) {
+      return res.json({ message: "User already a collaborator", collaborator: existing });
+    }
+
+    const created = await UserDocument.create({ userId, documentId, role, invitedBy: null });
+    return res.status(201).json({ message: "Membership added", collaborator: created });
+  } catch (error) {
+    return res.status(500).json({ message: "Error accepting invitation membership", error: error.message });
+  }
+};

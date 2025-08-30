@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../api/authService";
+import Container from "@mui/material/Container";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import Link from "@mui/material/Link";
+import Alert from "@mui/material/Alert";
 
 const Signup = () => {
   const [name, setName] = useState("");
@@ -20,51 +28,46 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="bg-white shadow-md rounded-lg p-6 w-96">
-        <h2 className="text-2xl font-semibold text-center mb-4">Sign Up</h2>
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        
-        <input
-          type="text"
-          placeholder="Name"
-          className="w-full p-2 mb-3 border rounded"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full p-2 mb-3 border rounded"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-2 mb-3 border rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      
-        <button
-          className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
-          onClick={handleRegister}
-        >
-          Register
-        </button>
-        
-        <p className="text-center mt-4">
-          Already have an account?{" "}
-          <span
-            className="text-blue-500 cursor-pointer hover:underline"
-            onClick={() => navigate("/login")}
-          >
-            Login
-          </span>
-        </p>
-      </div>
-    </div>
+    <Container maxWidth="sm" sx={{ display: "flex", alignItems: "center", minHeight: "100vh" }}>
+      <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
+        <Typography variant="h5" align="center" gutterBottom>
+          Sign Up
+        </Typography>
+        <Stack spacing={2}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField
+            type="text"
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+          />
+          <Button variant="contained" onClick={handleRegister} fullWidth>
+            Register
+          </Button>
+          <Typography align="center" variant="body2">
+            Already have an account?{' '}
+            <Link component="button" onClick={() => navigate('/login')} underline="hover">
+              Login
+            </Link>
+          </Typography>
+        </Stack>
+      </Paper>
+    </Container>
   );
 };
 

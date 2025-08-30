@@ -5,6 +5,38 @@ import "react-quill/dist/quill.snow.css";
 import axios from "axios";
 import { debounce } from "lodash";
 import CustomEditor from "./CustomEditor"; 
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import Divider from "@mui/material/Divider";
+import ButtonGroup from "@mui/material/ButtonGroup";
+import Button from "@mui/material/Button";
+import FormatBoldIcon from "@mui/icons-material/FormatBold";
+import FormatItalicIcon from "@mui/icons-material/FormatItalic";
+import FormatUnderlinedIcon from "@mui/icons-material/FormatUnderlined";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import FormatListNumberedIcon from "@mui/icons-material/FormatListNumbered";
+import FormatAlignLeftIcon from "@mui/icons-material/FormatAlignLeft";
+import FormatAlignCenterIcon from "@mui/icons-material/FormatAlignCenter";
+import FormatAlignRightIcon from "@mui/icons-material/FormatAlignRight";
+import TitleIcon from "@mui/icons-material/Title";
+import LinkIcon from "@mui/icons-material/Link";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
+import FormatStrikethroughIcon from "@mui/icons-material/FormatStrikethrough";
+import SuperscriptIcon from "@mui/icons-material/Superscript";
+import SubscriptIcon from "@mui/icons-material/Subscript";
+import UndoIcon from "@mui/icons-material/Undo";
+import RedoIcon from "@mui/icons-material/Redo";
+import FormatClearIcon from "@mui/icons-material/FormatClear";
+import FormatIndentDecreaseIcon from "@mui/icons-material/FormatIndentDecrease";
+import FormatIndentIncreaseIcon from "@mui/icons-material/FormatIndentIncrease";
+import CodeIcon from "@mui/icons-material/Code";
+import FormatQuoteIcon from "@mui/icons-material/FormatQuote";
+import FormatColorTextIcon from "@mui/icons-material/FormatColorText";
+import FormatColorFillIcon from "@mui/icons-material/FormatColorFill";
 import { getDocumentById } from "../api/documentService";
 import { config } from "../config.js";
 
@@ -93,27 +125,127 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
 
   const readOnly = userRole === "viewer";
 
+  const applyCommand = (command, value) => {
+    if (readOnly) return;
+    const el = document.getElementById("custom-editor");
+    if (el) el.focus();
+    document.execCommand(command, false, value || undefined);
+  };
+
+  const applyHeading = (level) => {
+    if (readOnly) return;
+    // Use formatBlock for headings
+    const el = document.getElementById("custom-editor");
+    if (el) el.focus();
+    document.execCommand("formatBlock", false, `H${level}`);
+  };
+
+  const applyList = (ordered) => {
+    if (readOnly) return;
+    const el = document.getElementById("custom-editor");
+    if (el) el.focus();
+    document.execCommand(ordered ? "insertOrderedList" : "insertUnorderedList");
+  };
+
+  const applyAlign = (align) => {
+    if (readOnly) return;
+    const el = document.getElementById("custom-editor");
+    if (el) el.focus();
+    document.execCommand("justify" + align);
+  };
+
+  const insertLink = () => {
+    if (readOnly) return;
+    const url = window.prompt("Enter URL");
+    if (url) document.execCommand("createLink", false, url);
+  };
+
+  const removeLink = () => {
+    if (readOnly) return;
+    applyCommand("unlink");
+  };
+
+  const insertCodeBlock = () => {
+    if (readOnly) return;
+    applyCommand("formatBlock", "PRE");
+  };
+
+  const insertBlockquote = () => {
+    if (readOnly) return;
+    applyCommand("formatBlock", "BLOCKQUOTE");
+  };
+
+  const setTextColor = () => {
+    if (readOnly) return;
+    const color = window.prompt("Enter text color (e.g. #ff0000 or red)");
+    if (color) applyCommand("foreColor", color);
+  };
+
+  const setHighlight = () => {
+    if (readOnly) return;
+    const color = window.prompt("Enter highlight color (e.g. #ffff00)");
+    if (color) applyCommand("hiliteColor", color);
+  };
+
   return (
-    <div className="h-full w-full p-4 border border-gray-300 rounded-md bg-white shadow-md">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-800">{documentTitle || "Untitled Document"}</h1>
-        <div className="text-sm text-gray-600 flex items-center gap-2">
-          <span className={`px-2 py-1 rounded ${
-            userRole === 'admin' ? 'bg-purple-100 text-purple-700' :
-            userRole === 'editor' ? 'bg-blue-100 text-blue-700' :
-            userRole === 'viewer' ? 'bg-gray-100 text-gray-700' : ''
-          }`}>
-            Role: {userRole || 'unknown'}
-          </span>
-          <span>{isSaving ? "Saving..." : "Saved"}</span>
-        </div>
-      </div>
-      {/* <ReactQuill value={content} onChange={handleChange} className="h-[80vh]" /> */}
-      <CustomEditor value={content} onChange={handleChange} readOnly={readOnly} />
-      {readOnly && (
-        <p className="mt-2 text-sm text-gray-500">You have view-only access to this document.</p>
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Typography variant="h5" fontWeight={700}>{documentTitle || "Untitled Document"}</Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          {userRole && <Chip size="small" label={`Role: ${userRole}`} color={userRole === 'admin' ? 'secondary' : userRole === 'editor' ? 'primary' : 'default'} />}
+          <Typography variant="caption" color="text.secondary">{isSaving ? "Saving..." : "Saved"}</Typography>
+        </Stack>
+      </Stack>
+      {!readOnly && (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Undo"><IconButton size="small" onClick={() => applyCommand('undo')}><UndoIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Redo"><IconButton size="small" onClick={() => applyCommand('redo')}><RedoIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Clear formatting"><IconButton size="small" onClick={() => applyCommand('removeFormat')}><FormatClearIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Heading 1"><Button onClick={() => applyHeading(1)}><TitleIcon fontSize="small" /></Button></Tooltip>
+            <Tooltip title="Heading 2"><Button onClick={() => applyHeading(2)}><TitleIcon fontSize="small" /></Button></Tooltip>
+            <Tooltip title="Heading 3"><Button onClick={() => applyHeading(3)}><TitleIcon fontSize="small" /></Button></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Bold"><IconButton size="small" onClick={() => applyCommand('bold')}><FormatBoldIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Italic"><IconButton size="small" onClick={() => applyCommand('italic')}><FormatItalicIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Underline"><IconButton size="small" onClick={() => applyCommand('underline')}><FormatUnderlinedIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Strikethrough"><IconButton size="small" onClick={() => applyCommand('strikeThrough')}><FormatStrikethroughIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Superscript"><IconButton size="small" onClick={() => applyCommand('superscript')}><SuperscriptIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Subscript"><IconButton size="small" onClick={() => applyCommand('subscript')}><SubscriptIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Bulleted list"><IconButton size="small" onClick={() => applyList(false)}><FormatListBulletedIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Numbered list"><IconButton size="small" onClick={() => applyList(true)}><FormatListNumberedIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Align left"><IconButton size="small" onClick={() => applyAlign('Left')}><FormatAlignLeftIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Align center"><IconButton size="small" onClick={() => applyAlign('Center')}><FormatAlignCenterIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Align right"><IconButton size="small" onClick={() => applyAlign('Right')}><FormatAlignRightIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Insert link"><IconButton size="small" onClick={insertLink}><LinkIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Remove link"><IconButton size="small" onClick={removeLink}><LinkOffIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Code block"><IconButton size="small" onClick={insertCodeBlock}><CodeIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Blockquote"><IconButton size="small" onClick={insertBlockquote}><FormatQuoteIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+          <ButtonGroup size="small" variant="outlined">
+            <Tooltip title="Text color"><IconButton size="small" onClick={setTextColor}><FormatColorTextIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Highlight"><IconButton size="small" onClick={setHighlight}><FormatColorFillIcon fontSize="small" /></IconButton></Tooltip>
+          </ButtonGroup>
+        </Stack>
       )}
-    </div>
+      <CustomEditor value={content} onChange={handleChange} readOnly={readOnly} editorId="custom-editor" />
+      {readOnly && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          You have view-only access to this document.
+        </Typography>
+      )}
+    </Paper>
   );
 };
 

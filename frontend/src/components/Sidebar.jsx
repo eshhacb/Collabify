@@ -1,41 +1,55 @@
 import React from "react";
-import { Link } from "react-router-dom";  // To navigate to different pages if needed
+import { Link as RouterLink } from "react-router-dom";  // To navigate to different pages if needed
+import Drawer from "@mui/material/Drawer";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
+
+const drawerWidth = 240;
 
 const Sidebar = () => {
   return (
-    <div className="flex flex-col w-64 h-screen bg-gradient-to-b from-purple-500 to-pink-500 text-white">
-      <div className="flex items-center justify-center h-20 text-2xl font-semibold">
-        <span>Collabify</span>
-      </div>
-
-      <div className="flex flex-col space-y-4 p-4">
-        {/* Links or items for the sidebar */}
-        <Link
-          to="/collaboration"
-          className="text-white hover:bg-pink-600 p-2 rounded-md transition-all"
-        >
-          Collaboration
-        </Link>
-        <Link
-          to="/documents"
-          className="text-white hover:bg-pink-600 p-2 rounded-md transition-all"
-        >
-          Documents
-        </Link>
-        <Link
-          to="/profile"
-          className="text-white hover:bg-pink-600 p-2 rounded-md transition-all"
-        >
-          Profile
-        </Link>
-        <Link
-          to="/settings"
-          className="text-white hover:bg-pink-600 p-2 rounded-md transition-all"
-        >
-          Settings
-        </Link>
-      </div>
-    </div>
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: drawerWidth,
+        flexShrink: 0,
+        [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+      }}
+    >
+      <Toolbar>
+        <Typography variant="h6" noWrap component="div">
+          Collabify
+        </Typography>
+      </Toolbar>
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/collaboration">
+            <ListItemText primary="Collaboration" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/documents">
+            <ListItemText primary="Documents" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/profile">
+            <ListItemText primary="Profile" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/settings">
+            <ListItemText primary="Settings" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Drawer>
   );
 };
 

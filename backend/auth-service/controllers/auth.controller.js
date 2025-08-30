@@ -110,8 +110,21 @@ export const acceptInvitation = async (req, res) => {
       return res.status(400).json({ message: "Failed to accept invitation" });
     }
 
-    // Add user to document (this would be handled by document service)
-    // For now, we'll just return success
+    // Add user to document via Document Service internal endpoint
+    try {
+      const documentServiceUrl = process.env.DOCUMENT_SERVICE_URL || 'http://localhost:5002';
+      const serviceSecret = process.env.SERVICE_SECRET || '';
+      await fetch(`${documentServiceUrl}/api/documents/internal/invitations/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-service-secret': serviceSecret
+        },
+        body: JSON.stringify({ documentId: invitation.documentId, userId: user.id, role: invitation.role })
+      });
+    } catch (_) {
+      // Non-fatal: if membership add fails here, the user can still access after manual add
+    }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 

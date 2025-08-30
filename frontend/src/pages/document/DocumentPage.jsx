@@ -2,6 +2,16 @@ import React,{useEffect,useState} from "react";
 import { createNewDocument,getAllDocuments } from "../../api/documentService";
 import DocumentCard from "./DocumentCard";
 import { useNavigate } from "react-router-dom";
+import Container from "@mui/material/Container";
+import Typography from "@mui/material/Typography";
+import Grid from "@mui/material/Grid";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
+import Stack from "@mui/material/Stack";
 
 
 const DocumentPage = () => {
@@ -31,8 +41,7 @@ const DocumentPage = () => {
       try {
         const newDoc = await createNewDocument(newTitle);
         setShowPopup(false);
-        setNewTitle(""); // Reset input field
-        // Redirect to the collaboration/editor page for the new document
+        setNewTitle("");
         navigate(`/collaborate/${newDoc.id}`);
       } catch (error) {
         console.error("Error creating document:", error);
@@ -40,55 +49,39 @@ const DocumentPage = () => {
     };
   
     return (
-      <div className="p-6">
-        {/* Header with Plus (+) Button */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">My Documents</h2>
-          <button
-            onClick={() => setShowPopup(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600"
-          >
-            +
-          </button>
-        </div>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+          <Typography variant="h5">My Documents</Typography>
+          <Button variant="contained" color="success" onClick={() => setShowPopup(true)}>New</Button>
+        </Stack>
   
-        {/* Document Cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <Grid container spacing={2}>
           {documents.map((doc) => (
-            <DocumentCard key={doc.id} document={doc} />
+            <Grid key={doc.id} item xs={12} sm={6} md={4}>
+              <DocumentCard document={doc} />
+            </Grid>
           ))}
-        </div>
+        </Grid>
   
-        {/* Popup Modal for Creating New Document */}
-        {showPopup && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-              <h3 className="text-xl font-semibold mb-4">Create a New Document</h3>
-              <input
-                type="text"
-                placeholder="Enter document title..."
-                className="w-full p-2 border rounded mb-4"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-              />
-              <div className="flex justify-end">
-                <button
-                  className="bg-gray-400 text-white px-4 py-2 rounded mr-2"
-                  onClick={() => setShowPopup(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                  onClick={handleAddDocument}
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        <Dialog open={showPopup} onClose={() => setShowPopup(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Create a New Document</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Document title"
+              type="text"
+              fullWidth
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowPopup(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleAddDocument}>Create</Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
     );
   };
   
