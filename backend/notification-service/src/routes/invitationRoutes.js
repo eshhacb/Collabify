@@ -5,7 +5,9 @@ import {
   acceptInvitation,
   getInvitationsByDocument,
   cancelInvitation,
-  cleanupExpiredInvitations
+  cleanupExpiredInvitations,
+  getInvitationsByRecipient,
+  rejectInvitation,
 } from '../controllers/invitationController.js';
 
 const router = express.Router();
@@ -21,6 +23,12 @@ router.post('/accept/:token', acceptInvitation);
 
 // Get all invitations for a document
 router.get('/document/:documentId', getInvitationsByDocument);
+
+// Recipient invitations
+router.get('/recipient', getInvitationsByRecipient);
+
+// Reject invitation
+router.post('/reject/:token', rejectInvitation);
 
 // Cancel invitation
 router.delete('/:invitationId', cancelInvitation);

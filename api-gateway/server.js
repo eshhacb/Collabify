@@ -17,10 +17,15 @@ app.use(
   cors({
     origin: ["http://localhost:5173", "http://localhost:3000"], // Allow multiple frontend origins
     credentials: true, // Allow cookies/auth headers
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed methods
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
   })
 );
+// Explicitly handle preflight across all routes
+app.options("*", cors({
+  origin: ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true,
+}));
 
 app.use(
   "/api/auth",
@@ -60,6 +65,19 @@ app.use(
       // Forward cookies and headers
       proxyReqOpts.headers = { ...srcReq.headers };
       return proxyReqOpts;
+    },
+    userResHeaderDecorator: (headers, userReq) => {
+      // Ensure proper CORS headers on proxied responses
+      const allowed = new Set(["http://localhost:5173", "http://localhost:3000"]);
+      const origin = userReq.headers.origin;
+      if (origin && allowed.has(origin)) {
+        headers["access-control-allow-origin"] = origin;
+        headers["vary"] = "Origin";
+        headers["access-control-allow-credentials"] = "true";
+        headers["access-control-allow-headers"] = "Content-Type, Authorization";
+        headers["access-control-allow-methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+      }
+      return headers;
     },
     proxyErrorHandler: (err, res, next) => {
       res.status(500).json({ error: "API Gateway Notification Service Proxy Error" });

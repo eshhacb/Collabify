@@ -19,6 +19,9 @@ const Login = () => {
       if (res?.data?.token) {
         localStorage.setItem("token", res.data.token);
       }
+      if (res?.data?.user?.email) {
+        localStorage.setItem("userEmail", res.data.user.email);
+      }
       navigate("/documents");
     } catch (error) {
       console.error("Login failed:", error.response?.data?.message || error.message);

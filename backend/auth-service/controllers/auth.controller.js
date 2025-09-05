@@ -31,7 +31,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user.id, email: user.email, name: user.name }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     res.cookie("token", token, {
       httpOnly: true, // Prevents access from JavaScript
@@ -126,7 +126,7 @@ export const acceptInvitation = async (req, res) => {
       // Non-fatal: if membership add fails here, the user can still access after manual add
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user.id, email: user.email, name: user.name }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     res.cookie("token", token, {
       httpOnly: true,

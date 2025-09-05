@@ -3,6 +3,51 @@ import { sendInvitationEmail } from '../services/emailService.js';
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 
+// Get invitations by recipient email
+export const getInvitationsByRecipient = async (req, res) => {
+  try {
+    const email = (req.query.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ message: 'email query is required' });
+
+    const invitations = await Invitation.find({ email });
+    invitations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      invitations: invitations.map((inv) => ({
+        id: inv._id,
+        email: inv.email,
+        documentId: inv.documentId,
+        documentTitle: inv.documentTitle,
+        role: inv.role,
+        status: inv.status,
+        invitedByName: inv.invitedByName,
+        createdAt: inv.createdAt,
+        expiresAt: inv.expiresAt,
+        token: inv.token,
+      })),
+    });
+  } catch (error) {
+    console.error('Error getting recipient invitations:', error);
+    res.status(500).json({ message: 'Failed to get invitations', error: error.message });
+  }
+};
+
+// Reject invitation by token
+export const rejectInvitation = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const invitation = await Invitation.findOne({ token });
+    if (!invitation) return res.status(404).json({ message: 'Invitation not found' });
+    if (invitation.status !== 'pending') return res.status(400).json({ message: 'Can only reject pending invitations' });
+
+    await invitation.markAsExpired(); // or track a separate 'rejected' status later
+    res.json({ message: 'Invitation rejected' });
+  } catch (error) {
+    console.error('Error rejecting invitation:', error);
+    res.status(500).json({ message: 'Failed to reject invitation', error: error.message });
+  }
+};
+
 // Send invitation
 export const sendInvitation = async (req, res) => {
   try {

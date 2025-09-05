@@ -112,9 +112,10 @@ export const getAllDocuments = async (req, res) => {
     const result = documents.map((doc) => {
       const json = doc.toJSON();
       const role = json.UserDocuments?.[0]?.role || json.UserDocument?.role || null;
+      const isOwner = json.ownerId === userId;
       delete json.UserDocuments;
       delete json.UserDocument;
-      return { ...json, userRole: role };
+      return { ...json, userRole: role, isOwner };
     });
 
     return res.json({ documents: result });
@@ -282,7 +283,7 @@ export const sendInvitation = async (req, res) => {
     }
 
     // Get inviter's name (you might want to get this from auth service)
-    const inviterName = req.user.name || req.user.email || 'Unknown User';
+    const inviterName = req.user.name || req.user.email || req.user.userId || 'Unknown User';
 
     // Send invitation via notification service
     const invitationData = {
@@ -368,6 +369,13 @@ export const acceptInvitationMembership = async (req, res) => {
 
     const existing = await UserDocument.findOne({ where: { userId, documentId } });
     if (existing) {
+      // Upgrade role if incoming role has higher privileges
+      const rank = { viewer: 0, editor: 1, admin: 2 };
+      if ((rank[role] ?? -1) > (rank[existing.role] ?? -1)) {
+        existing.role = role;
+        await existing.save();
+        return res.json({ message: "Collaborator role upgraded", collaborator: existing });
+      }
       return res.json({ message: "User already a collaborator", collaborator: existing });
     }
 

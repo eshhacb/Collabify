@@ -14,7 +14,7 @@ import { useColorMode } from "../main";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const isAuthenticated = document.cookie.includes("token=");
+  const isAuthenticated = Boolean(document.cookie.includes("token=") || localStorage.getItem("token"));
   const { toggleColorMode, mode } = useColorMode();
 
   const handleLogout = async () => {
@@ -47,8 +47,11 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Button color="inherit" component={RouterLink} to="/dashboard">
-                Dashboard
+              <Button color="inherit" component={RouterLink} to="/documents">
+                Documents
+              </Button>
+              <Button color="inherit" component={RouterLink} to="/invitations">
+                Invitations
               </Button>
               <Button color="inherit" onClick={handleLogout}>
                 Logout

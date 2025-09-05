@@ -47,21 +47,45 @@ const DocumentPage = () => {
         console.error("Error creating document:", error);
       }
     };
+
+    const myDocs = documents.filter((d) => d.isOwner);
+    const sharedDocs = documents.filter((d) => !d.isOwner);
   
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-          <Typography variant="h5">My Documents</Typography>
+          <Typography variant="h5">Documents</Typography>
           <Button variant="contained" color="success" onClick={() => setShowPopup(true)}>New</Button>
         </Stack>
-  
+
+        {/* My Documents */}
+        <Typography variant="h6" sx={{ mb: 1 }}>My Documents</Typography>
         <Grid container spacing={2}>
-          {documents.map((doc) => (
+          {myDocs.map((doc) => (
             <Grid key={doc.id} item xs={12} sm={6} md={4}>
               <DocumentCard document={doc} />
             </Grid>
           ))}
+          {myDocs.length === 0 && (
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">No documents yet. Create one using the New button.</Typography>
+            </Grid>
+          )}
         </Grid>
+
+        {/* Shared with me */}
+        {sharedDocs.length > 0 && (
+          <>
+            <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Shared with me</Typography>
+            <Grid container spacing={2}>
+              {sharedDocs.map((doc) => (
+                <Grid key={doc.id} item xs={12} sm={6} md={4}>
+                  <DocumentCard document={doc} />
+                </Grid>
+              ))}
+            </Grid>
+          </>
+        )}
   
         <Dialog open={showPopup} onClose={() => setShowPopup(false)} fullWidth maxWidth="sm">
           <DialogTitle>Create a New Document</DialogTitle>
