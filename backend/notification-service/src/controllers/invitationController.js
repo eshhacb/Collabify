@@ -40,7 +40,13 @@ export const rejectInvitation = async (req, res) => {
     if (!invitation) return res.status(404).json({ message: 'Invitation not found' });
     if (invitation.status !== 'pending') return res.status(400).json({ message: 'Can only reject pending invitations' });
 
-    await invitation.markAsExpired(); // or track a separate 'rejected' status later
+    if (typeof invitation.reject === 'function') {
+      await invitation.reject();
+    } else {
+      // Fallback for mongoose doc if reject method not present
+      invitation.status = 'rejected';
+      await invitation.save();
+    }
     res.json({ message: 'Invitation rejected' });
   } catch (error) {
     console.error('Error rejecting invitation:', error);
@@ -157,10 +163,15 @@ export const getInvitationByToken = async (req, res) => {
       });
     }
 
-    // Check if invitation is already accepted
+    // Check if invitation is already accepted or rejected
     if (invitation.status === 'accepted') {
       return res.status(409).json({
         message: 'Invitation has already been accepted'
+      });
+    }
+    if (invitation.status === 'rejected') {
+      return res.status(409).json({
+        message: 'Invitation has been rejected'
       });
     }
 
@@ -171,6 +182,7 @@ export const getInvitationByToken = async (req, res) => {
         documentId: invitation.documentId,
         documentTitle: invitation.documentTitle,
         role: invitation.role,
+        status: invitation.status,
         invitedByName: invitation.invitedByName,
         expiresAt: invitation.expiresAt
       }
@@ -207,10 +219,15 @@ export const acceptInvitation = async (req, res) => {
       });
     }
 
-    // Check if invitation is already accepted
+    // Check if invitation is already accepted or rejected
     if (invitation.status === 'accepted') {
       return res.status(409).json({
         message: 'Invitation has already been accepted'
+      });
+    }
+    if (invitation.status === 'rejected') {
+      return res.status(409).json({
+        message: 'Invitation has been rejected'
       });
     }
 

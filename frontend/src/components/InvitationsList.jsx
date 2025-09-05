@@ -85,6 +85,8 @@ const InvitationsList = ({ documentId, userRole }) => {
         return 'Pending';
       case 'accepted':
         return 'Accepted';
+      case 'rejected':
+        return 'Rejected';
       case 'expired':
         return 'Expired';
       default:
@@ -98,6 +100,8 @@ const InvitationsList = ({ documentId, userRole }) => {
         return { color: 'warning', icon: <ScheduleIcon /> };
       case 'accepted':
         return { color: 'success', icon: <CheckCircleIcon /> };
+      case 'rejected':
+        return { color: 'default', icon: <CancelIcon /> };
       case 'expired':
         return { color: 'error', icon: <CancelIcon /> };
       default:

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { logoutUser } from "../api/authService";
 import AppBar from "@mui/material/AppBar";
@@ -14,11 +14,16 @@ import { useColorMode } from "../main";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const isAuthenticated = Boolean(document.cookie.includes("token=") || localStorage.getItem("token"));
   const { toggleColorMode, mode } = useColorMode();
 
+  // Determine auth based on localStorage token (keeps UI consistent)
+  const isAuthenticated = useMemo(() => Boolean(localStorage.getItem("token")), [localStorage.getItem("token")]);
+
   const handleLogout = async () => {
-    await logoutUser();
+    try { await logoutUser(); } catch {}
+    // Clear local state copies used by the app
+    localStorage.removeItem("token");
+    localStorage.removeItem("userEmail");
     navigate("/login");
   };
 

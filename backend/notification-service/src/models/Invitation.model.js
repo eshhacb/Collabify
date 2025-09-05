@@ -39,7 +39,7 @@ const invitationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'expired'],
+    enum: ['pending', 'accepted', 'rejected', 'expired'],
     default: 'pending'
   },
   expiresAt: {
@@ -98,6 +98,12 @@ class InMemoryInvitation {
 
   async markAsExpired() {
     this.status = 'expired';
+    this.updatedAt = new Date();
+    return this;
+  }
+
+  async reject() {
+    this.status = 'rejected';
     this.updatedAt = new Date();
     return this;
   }

@@ -80,12 +80,39 @@ const InvitationAccept = () => {
     }
   };
 
+  // Reject invitation handler
+  const handleRejectInvitation = async () => {
+    setIsAccepting(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${config.API_URL}/api/invitations/reject/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to reject invitation');
+      }
+
+      setSuccess('Invitation rejected');
+      setTimeout(() => navigate('/'), 1500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending':
         return <Clock className="w-6 h-6 text-yellow-500" />;
       case 'accepted':
         return <CheckCircle className="w-6 h-6 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="w-6 h-6 text-gray-500" />;
       case 'expired':
         return <XCircle className="w-6 h-6 text-red-500" />;
       default:
@@ -99,6 +126,8 @@ const InvitationAccept = () => {
         return 'Pending';
       case 'accepted':
         return 'Accepted';
+      case 'rejected':
+        return 'Rejected';
       case 'expired':
         return 'Expired';
       default:
@@ -112,6 +141,8 @@ const InvitationAccept = () => {
         return 'text-yellow-700 bg-yellow-100';
       case 'accepted':
         return 'text-green-700 bg-green-100';
+      case 'rejected':
+        return 'text-gray-700 bg-gray-100';
       case 'expired':
         return 'text-red-700 bg-red-100';
       default:
@@ -244,20 +275,30 @@ const InvitationAccept = () => {
                 {/* Action Buttons */}
                 <div className="space-y-3">
                   {invitation.status === 'pending' && (
-                    <button
-                      onClick={handleAcceptInvitation}
-                      disabled={isAccepting}
-                      className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center"
-                    >
-                      {isAccepting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Accepting...
-                        </>
-                      ) : (
-                        'Accept Invitation'
-                      )}
-                    </button>
+                    <>
+                      <button
+                        onClick={handleAcceptInvitation}
+                        disabled={isAccepting}
+                        className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                      >
+                        {isAccepting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Accepting...
+                          </>
+                        ) : (
+                          'Accept Invitation'
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleRejectInvitation}
+                        disabled={isAccepting}
+                        className="w-full px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        Reject Invitation
+                      </button>
+                    </>
                   )}
                   
                   <button

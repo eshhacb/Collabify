@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import DocumentPage from "./pages/document/DocumentPage";
 import InvitationAccept from "./pages/InvitationAccept";
 import Invitations from "./pages/Invitations";
+import RequireAuth from "./shared/RequireAuth";
 
 function App() {
   return (
@@ -17,9 +18,11 @@ function App() {
         <Routes>
           <Route path="/" element={<Signup />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/collaborate/:documentId" element={<CollaborationPage />} />
-          <Route path="/documents" element={<DocumentPage />} />
-          <Route path="/invitations" element={<Invitations />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/collaborate/:documentId" element={<CollaborationPage />} />
+            <Route path="/documents" element={<DocumentPage />} />
+            <Route path="/invitations" element={<Invitations />} />
+          </Route>
           <Route path="/invitation/accept/:token" element={<InvitationAccept />} />
         </Routes>
       </Box>
