@@ -65,6 +65,9 @@ const InvitationAccept = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('userId', data.user.id);
       localStorage.setItem('userEmail', data.user.email);
+      if (data?.user?.name) {
+        localStorage.setItem('userName', data.user.name);
+      }
 
       setSuccess('Invitation accepted successfully!');
       

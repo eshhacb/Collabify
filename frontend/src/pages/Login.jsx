@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser } from "../api/authService";
+import { loginUser, logoutUser } from "../api/authService";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -13,6 +13,23 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // If user is already logged in and visits login page, warn and log out on confirm
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      const shouldLogout = window.confirm("You are already logged in. Do you want to log out?");
+      if (shouldLogout) {
+        (async () => {
+          try { await logoutUser(); } catch {}
+          localStorage.removeItem("token");
+          localStorage.removeItem("userEmail");
+        })();
+      } else {
+        navigate("/documents", { replace: true });
+      }
+    }
+  }, [navigate]);
+
   const handleLogin = async () => {
     try {
       const res = await loginUser({ email, password });
@@ -22,7 +39,10 @@ const Login = () => {
       if (res?.data?.user?.email) {
         localStorage.setItem("userEmail", res.data.user.email);
       }
-      navigate("/documents");
+      if (res?.data?.user?.name) {
+        localStorage.setItem("userName", res.data.user.name);
+      }
+      navigate("/profile");
     } catch (error) {
       console.error("Login failed:", error.response?.data?.message || error.message);
     }

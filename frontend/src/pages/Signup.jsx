@@ -20,7 +20,13 @@ const Signup = () => {
   const handleRegister = async () => {
     setError("");
     try {
-      await registerUser({ name, email, password});
+      const res = await registerUser({ name, email, password});
+      if (res?.data?.user?.name) {
+        localStorage.setItem("userName", res.data.user.name);
+      }
+      if (res?.data?.user?.email) {
+        localStorage.setItem("userEmail", res.data.user.email);
+      }
       navigate("/login");
     } catch (error) {
       setError(error.response?.data?.message || "Registration failed");
