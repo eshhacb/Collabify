@@ -5,6 +5,7 @@ import "react-quill/dist/quill.snow.css";
 import axios from "axios";
 import { debounce } from "lodash";
 import CustomEditor from "./CustomEditor"; 
+import CodeEditor from "./CodeEditor"; 
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -47,10 +48,48 @@ const SOCKET_URL = config.SOCKET_URL;
 const socket = io(SOCKET_URL, { transports: ["websocket", "polling"], withCredentials: true });
 
 const Editor = ({ documentId, onContentChange, externalContent  }) => {
-  const [content, setContent] = useState("");
+  // Keep doc editor and code editor content separate
+  const [docContent, setDocContent] = useState("");
+  const [codeContent, setCodeContent] = useState("");
   const [documentTitle, setDocumentTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [userRole, setUserRole] = useState(null); // viewer | editor | admin
+  const [isCodeMode, setIsCodeMode] = useState(false);
+
+  // Load persisted editor mode from localStorage per document
+  useEffect(() => {
+    if (!documentId) return;
+    try {
+      const saved = localStorage.getItem(`editorMode:${documentId}`);
+      if (saved === 'code') setIsCodeMode(true);
+      if (saved === 'normal') setIsCodeMode(false);
+    } catch {}
+  }, [documentId]);
+
+  // Load persisted code content per document from localStorage
+  useEffect(() => {
+    if (!documentId) return;
+    try {
+      const savedCode = localStorage.getItem(`codeContent:${documentId}`);
+      if (savedCode !== null) setCodeContent(savedCode);
+    } catch {}
+  }, [documentId]);
+
+  // Persist editor mode on change
+  useEffect(() => {
+    if (!documentId) return;
+    try {
+      localStorage.setItem(`editorMode:${documentId}`, isCodeMode ? 'code' : 'normal');
+    } catch {}
+  }, [documentId, isCodeMode]);
+
+  // Persist code content on change
+  useEffect(() => {
+    if (!documentId) return;
+    try {
+      localStorage.setItem(`codeContent:${documentId}`, codeContent ?? "");
+    } catch {}
+  }, [documentId, codeContent]);
 
   // Fetch role from document service
   useEffect(() => {
@@ -71,7 +110,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     socket.emit("join-document", documentId);
 
     const handleDocumentUpdate = (newContent) => {
-      setContent(newContent);
+      setDocContent(newContent);
       onContentChange(newContent);
     };
 
@@ -80,7 +119,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     axios
       .get(`${API_BASE_URL}/api/collaboration/${documentId}`, { withCredentials: false })
       .then((res) => {
-        setContent(res.data.content || "");
+        setDocContent(res.data.content || "");
         setDocumentTitle((prev) => prev || res.data.title || "Untitled Document");
         onContentChange(res.data.content || "");
       })
@@ -92,7 +131,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     };
   }, [documentId,onContentChange]);
 
-  const emitChange = useCallback(
+  const emitDocChange = useCallback(
     debounce((value) => {
       console.log("Sending updated content to backend:", value);
       socket.emit("edit-document", { documentId, content: value });
@@ -101,26 +140,30 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     [documentId]
   );
 
-
-  const handleChange = (value) => {
-    setContent(value);
+  // Document editor change handler (synced)
+  const handleDocChange = (value) => {
+    setDocContent(value);
     setIsSaving(true);
     // Only emit change if user can edit
     if (userRole === "editor" || userRole === "admin") {
-      emitChange(value);
+      emitDocChange(value);
     }
-    onContentChange(value); 
-    
+    onContentChange(value);
+  };
+
+  // Code editor change handler (local only)
+  const handleCodeChange = (value) => {
+    setCodeContent(value ?? "");
   };
 
   useEffect(() => {
     console.log("Received externalContent in Editor:", externalContent);
-    if (externalContent !== undefined && externalContent !== content) {
-      setContent(externalContent);
-      console.log("Updated editor content:", externalContent);
+    if (externalContent !== undefined && externalContent !== docContent) {
+      setDocContent(externalContent);
+      console.log("Updated doc editor content:", externalContent);
       // onContentChange(externalContent);
     }
-  }, [externalContent])
+  }, [externalContent, docContent])
 
 
   const readOnly = userRole === "viewer";
@@ -199,47 +242,67 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
       {!readOnly && (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, flexWrap: 'wrap' }}>
           <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Undo"><IconButton size="small" onClick={() => applyCommand('undo')}><UndoIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Redo"><IconButton size="small" onClick={() => applyCommand('redo')}><RedoIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Clear formatting"><IconButton size="small" onClick={() => applyCommand('removeFormat')}><FormatClearIcon fontSize="small" /></IconButton></Tooltip>
+            <Button onClick={() => setIsCodeMode(false)} variant={!isCodeMode ? 'contained' : 'outlined'}>Normal Editor</Button>
+            <Button onClick={() => setIsCodeMode(true)} variant={isCodeMode ? 'contained' : 'outlined'}>Code Editor</Button>
           </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Heading 1"><Button onClick={() => applyHeading(1)}><TitleIcon fontSize="small" /></Button></Tooltip>
-            <Tooltip title="Heading 2"><Button onClick={() => applyHeading(2)}><TitleIcon fontSize="small" /></Button></Tooltip>
-            <Tooltip title="Heading 3"><Button onClick={() => applyHeading(3)}><TitleIcon fontSize="small" /></Button></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Bold"><IconButton size="small" onClick={() => applyCommand('bold')}><FormatBoldIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Italic"><IconButton size="small" onClick={() => applyCommand('italic')}><FormatItalicIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Underline"><IconButton size="small" onClick={() => applyCommand('underline')}><FormatUnderlinedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Strikethrough"><IconButton size="small" onClick={() => applyCommand('strikeThrough')}><FormatStrikethroughIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Superscript"><IconButton size="small" onClick={() => applyCommand('superscript')}><SuperscriptIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Subscript"><IconButton size="small" onClick={() => applyCommand('subscript')}><SubscriptIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Bulleted list"><IconButton size="small" onClick={() => applyList(false)}><FormatListBulletedIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Numbered list"><IconButton size="small" onClick={() => applyList(true)}><FormatListNumberedIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Align left"><IconButton size="small" onClick={() => applyAlign('Left')}><FormatAlignLeftIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Align center"><IconButton size="small" onClick={() => applyAlign('Center')}><FormatAlignCenterIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Align right"><IconButton size="small" onClick={() => applyAlign('Right')}><FormatAlignRightIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Insert link"><IconButton size="small" onClick={insertLink}><LinkIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Remove link"><IconButton size="small" onClick={removeLink}><LinkOffIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Code block"><IconButton size="small" onClick={insertCodeBlock}><CodeIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Blockquote"><IconButton size="small" onClick={insertBlockquote}><FormatQuoteIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
-          <ButtonGroup size="small" variant="outlined">
-            <Tooltip title="Text color"><IconButton size="small" onClick={setTextColor}><FormatColorTextIcon fontSize="small" /></IconButton></Tooltip>
-            <Tooltip title="Highlight"><IconButton size="small" onClick={setHighlight}><FormatColorFillIcon fontSize="small" /></IconButton></Tooltip>
-          </ButtonGroup>
+
+          {!isCodeMode && (
+            <>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Undo"><IconButton size="small" onClick={() => applyCommand('undo')}><UndoIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Redo"><IconButton size="small" onClick={() => applyCommand('redo')}><RedoIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Clear formatting"><IconButton size="small" onClick={() => applyCommand('removeFormat')}><FormatClearIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Heading 1"><Button onClick={() => applyHeading(1)}><TitleIcon fontSize="small" /></Button></Tooltip>
+                <Tooltip title="Heading 2"><Button onClick={() => applyHeading(2)}><TitleIcon fontSize="small" /></Button></Tooltip>
+                <Tooltip title="Heading 3"><Button onClick={() => applyHeading(3)}><TitleIcon fontSize="small" /></Button></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Bold"><IconButton size="small" onClick={() => applyCommand('bold')}><FormatBoldIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Italic"><IconButton size="small" onClick={() => applyCommand('italic')}><FormatItalicIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Underline"><IconButton size="small" onClick={() => applyCommand('underline')}><FormatUnderlinedIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Strikethrough"><IconButton size="small" onClick={() => applyCommand('strikeThrough')}><FormatStrikethroughIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Superscript"><IconButton size="small" onClick={() => applyCommand('superscript')}><SuperscriptIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Subscript"><IconButton size="small" onClick={() => applyCommand('subscript')}><SubscriptIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Bulleted list"><IconButton size="small" onClick={() => applyList(false)}><FormatListBulletedIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Numbered list"><IconButton size="small" onClick={() => applyList(true)}><FormatListNumberedIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Align left"><IconButton size="small" onClick={() => applyAlign('Left')}><FormatAlignLeftIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Align center"><IconButton size="small" onClick={() => applyAlign('Center')}><FormatAlignCenterIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Align right"><IconButton size="small" onClick={() => applyAlign('Right')}><FormatAlignRightIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Insert link"><IconButton size="small" onClick={insertLink}><LinkIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Remove link"><IconButton size="small" onClick={removeLink}><LinkOffIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Code block"><IconButton size="small" onClick={insertCodeBlock}><CodeIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Blockquote"><IconButton size="small" onClick={insertBlockquote}><FormatQuoteIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+              <ButtonGroup size="small" variant="outlined">
+                <Tooltip title="Text color"><IconButton size="small" onClick={setTextColor}><FormatColorTextIcon fontSize="small" /></IconButton></Tooltip>
+                <Tooltip title="Highlight"><IconButton size="small" onClick={setHighlight}><FormatColorFillIcon fontSize="small" /></IconButton></Tooltip>
+              </ButtonGroup>
+            </>
+          )}
         </Stack>
       )}
-      <CustomEditor value={content} onChange={handleChange} readOnly={readOnly} editorId="custom-editor" />
+
+      {isCodeMode ? (
+        <CodeEditor
+          value={codeContent}
+          onChange={handleCodeChange}
+          readOnly={readOnly}
+          editorId={`code-editor:${documentId}`}
+        />
+      ) : (
+        <CustomEditor value={docContent} onChange={handleDocChange} readOnly={readOnly} editorId="custom-editor" />
+      )}
+
       {readOnly && (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           You have view-only access to this document.

@@ -10,6 +10,7 @@ const DOCUMENT_SERVICE_URL = process.env.DOCUMENT_SERVICE_URL || "http://localho
 const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5004";
 const COLLABORATION_SERVICE_URL = process.env.COLLABORATION_SERVICE_URL || "http://localhost:5003";
 const AI_SUGGESTIONS_SERVICE_URL = process.env.AI_SUGGESTIONS_SERVICE_URL || "http://localhost:5005";
+const CODE_RUNNER_SERVICE_URL = process.env.CODE_RUNNER_SERVICE_URL || "http://localhost:5006";
 
 const app = express();
 app.use(express.json());
@@ -111,6 +112,36 @@ app.use(
     },
     proxyErrorHandler: (err, res, next) => {
       res.status(500).json({ error: "API Gateway AI Suggestions Service Proxy Error" });
+    },
+  })
+);
+
+// AI code chat proxy
+app.use(
+  "/api/ai-code-chat",
+  proxy(AI_SUGGESTIONS_SERVICE_URL, {
+    proxyReqPathResolver: (req) => `/api/ai-code-chat${req.url}`,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+      proxyReqOpts.headers = { ...srcReq.headers };
+      return proxyReqOpts;
+    },
+    proxyErrorHandler: (err, res, next) => {
+      res.status(500).json({ error: "API Gateway AI Code Chat Proxy Error" });
+    },
+  })
+);
+
+// Code runner service proxy
+app.use(
+  "/api/code-runner",
+  proxy(CODE_RUNNER_SERVICE_URL, {
+    proxyReqPathResolver: (req) => `/api${req.url.replace(/^\/code-runner/, '')}`,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+      proxyReqOpts.headers = { ...srcReq.headers };
+      return proxyReqOpts;
+    },
+    proxyErrorHandler: (err, res, next) => {
+      res.status(500).json({ error: "API Gateway Code Runner Service Proxy Error" });
     },
   })
 );

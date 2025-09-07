@@ -346,6 +346,36 @@ export const cancelInvitation = async (req, res) => {
   }
 };
 
+// GET editor preference (viewer/editor/admin)
+export const getEditorPreference = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.userId;
+    const prefKey = `${documentId}:${userId}`;
+    const pref = editorPreferences.get(prefKey) || { mode: 'normal' };
+    return res.json(pref);
+  } catch (error) {
+    return res.status(500).json({ message: "Error getting editor preference", error: error.message });
+  }
+};
+
+// SET editor preference (viewer/editor/admin)
+export const setEditorPreference = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const userId = req.user.userId;
+    const { mode } = req.body; // 'normal' | 'code'
+    if (!['normal', 'code'].includes(mode)) {
+      return res.status(400).json({ message: "Invalid mode. Allowed: normal, code" });
+    }
+    const prefKey = `${documentId}:${userId}`;
+    editorPreferences.set(prefKey, { mode });
+    return res.json({ message: "Preference saved", mode });
+  } catch (error) {
+    return res.status(500).json({ message: "Error setting editor preference", error: error.message });
+  }
+};
+
 // INTERNAL: Accept invitation and add membership (called by auth-service)
 export const acceptInvitationMembership = async (req, res) => {
   try {
