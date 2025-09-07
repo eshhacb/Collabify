@@ -20,6 +20,9 @@ const CollaborationPage = () => {
   const [document, setDocument] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showInvitationsList, setShowInvitationsList] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try { return Number(localStorage.getItem('sidebarWidth')) || 240; } catch { return 240; }
+  });
 
   useEffect(() => {
     if (!documentId) return;
@@ -33,6 +36,10 @@ const CollaborationPage = () => {
         setUserRole(null);
       });
   }, [documentId]);
+
+  useEffect(() => {
+    try { localStorage.setItem('sidebarWidth', String(sidebarWidth)); } catch {}
+  }, [sidebarWidth]);
 
   const handleAISuggestion = async () => {
     setLoading(true);
@@ -50,9 +57,9 @@ const CollaborationPage = () => {
   };
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-6 bg-gray-100">
+    <div className="flex h-full min-h-0">
+      <Sidebar width={sidebarWidth} onResize={setSidebarWidth} />
+      <div className="flex-1 min-w-0 p-6 bg-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-semibold">
@@ -68,8 +75,6 @@ const CollaborationPage = () => {
               </span>
             )}
           </div>
-          
-          {/* Invite and Collaboration Actions */}
           {(userRole === 'admin' || userRole === 'editor') && (
             <div className="flex space-x-3">
               <button
@@ -79,7 +84,6 @@ const CollaborationPage = () => {
                 <Mail className="w-4 h-4" />
                 <span>Invite</span>
               </button>
-              
               <button
                 onClick={() => setShowInvitationsList(!showInvitationsList)}
                 className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -91,7 +95,6 @@ const CollaborationPage = () => {
           )}
         </div>
 
-        {/* Invitations List */}
         {showInvitationsList && (userRole === 'admin' || userRole === 'editor') && (
           <div className="mb-6">
             <InvitationsList 
@@ -103,7 +106,7 @@ const CollaborationPage = () => {
 
         {(userRole === 'editor' || userRole === 'admin') && (
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition mb-4"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition mb-4 self-start"
             onClick={handleAISuggestion}
             disabled={loading}
           >
@@ -111,13 +114,14 @@ const CollaborationPage = () => {
           </button>
         )}
 
-        <Editor
-          documentId={documentId}
-          externalContent={documentContent}
-          onContentChange={setDocumentContent}
-        />
+        <div className="flex-1 min-h-0">
+          <Editor
+            documentId={documentId}
+            externalContent={documentContent}
+            onContentChange={setDocumentContent}
+          />
+        </div>
 
-        {/* Invite Modal */}
         {showInviteModal && (
           <InviteModal
             isOpen={showInviteModal}
@@ -125,9 +129,7 @@ const CollaborationPage = () => {
             documentId={documentId}
             documentTitle={document?.title || 'Untitled Document'}
             onInviteSent={() => {
-              // Refresh invitations list if it's open
               if (showInvitationsList) {
-                // This will trigger a re-render of InvitationsList
                 setShowInvitationsList(false);
                 setTimeout(() => setShowInvitationsList(true), 100);
               }

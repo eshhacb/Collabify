@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { io } from "socket.io-client";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -122,6 +122,10 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
         setDocContent(res.data.content || "");
         setDocumentTitle((prev) => prev || res.data.title || "Untitled Document");
         onContentChange(res.data.content || "");
+        // Load code content from backend (fallback to existing state)
+        if (typeof res.data.code === 'string') {
+          setCodeContent(res.data.code);
+        }
       })
       .catch((err) => console.error("Error fetching document:", err));
 
@@ -151,10 +155,22 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     onContentChange(value);
   };
 
-  // Code editor change handler (local only)
-  const handleCodeChange = (value) => {
-    setCodeContent(value ?? "");
-  };
+  // Code editor change handler (persist to backend + local)
+  const handleCodeChange = useCallback(
+    debounce((value) => {
+      const next = value ?? "";
+      setCodeContent(next);
+      // Save to backend if user can edit
+      if (userRole === "editor" || userRole === "admin") {
+        fetch(`${API_BASE_URL}/api/collaboration/${documentId}/code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: next }),
+        }).catch((err) => console.error('Failed to save code:', err));
+      }
+    }, 800),
+    [API_BASE_URL, documentId, userRole]
+  );
 
   useEffect(() => {
     console.log("Received externalContent in Editor:", externalContent);
@@ -168,39 +184,69 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
 
   const readOnly = userRole === "viewer";
 
-  const applyCommand = (command, value) => {
-    if (readOnly) return;
+  // Track and restore text selection inside the custom contentEditable
+  const selectionRangeRef = useRef(null);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const el = document.getElementById("custom-editor");
+      if (!el) return;
+      const anchor = sel.anchorNode;
+      if (anchor && el.contains(anchor)) {
+        // Persist a clone so later edits don't mutate it
+        selectionRangeRef.current = sel.getRangeAt(0).cloneRange();
+      }
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
+
+  const focusAndRestoreSelection = () => {
     const el = document.getElementById("custom-editor");
     if (el) el.focus();
+    const sel = window.getSelection();
+    if (sel && selectionRangeRef.current) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(selectionRangeRef.current);
+      } catch {}
+    }
+  };
+
+  const applyCommand = (command, value) => {
+    if (readOnly) return;
+    focusAndRestoreSelection();
     document.execCommand(command, false, value || undefined);
   };
 
   const applyHeading = (level) => {
     if (readOnly) return;
+    focusAndRestoreSelection();
     // Use formatBlock for headings
-    const el = document.getElementById("custom-editor");
-    if (el) el.focus();
     document.execCommand("formatBlock", false, `H${level}`);
   };
 
   const applyList = (ordered) => {
     if (readOnly) return;
-    const el = document.getElementById("custom-editor");
-    if (el) el.focus();
+    focusAndRestoreSelection();
     document.execCommand(ordered ? "insertOrderedList" : "insertUnorderedList");
   };
 
   const applyAlign = (align) => {
     if (readOnly) return;
-    const el = document.getElementById("custom-editor");
-    if (el) el.focus();
+    focusAndRestoreSelection();
     document.execCommand("justify" + align);
   };
 
   const insertLink = () => {
     if (readOnly) return;
     const url = window.prompt("Enter URL");
-    if (url) document.execCommand("createLink", false, url);
+    if (url) {
+      focusAndRestoreSelection();
+      document.execCommand("createLink", false, url);
+    }
   };
 
   const removeLink = () => {
@@ -227,6 +273,7 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
   const setHighlight = () => {
     if (readOnly) return;
     const color = window.prompt("Enter highlight color (e.g. #ffff00)");
+    // Note: hiliteColor support varies by browser; this works in most Chromium builds for contentEditable
     if (color) applyCommand("hiliteColor", color);
   };
 
@@ -248,17 +295,17 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
 
           {!isCodeMode && (
             <>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Undo"><IconButton size="small" onClick={() => applyCommand('undo')}><UndoIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Redo"><IconButton size="small" onClick={() => applyCommand('redo')}><RedoIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Clear formatting"><IconButton size="small" onClick={() => applyCommand('removeFormat')}><FormatClearIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Heading 1"><Button onClick={() => applyHeading(1)}><TitleIcon fontSize="small" /></Button></Tooltip>
                 <Tooltip title="Heading 2"><Button onClick={() => applyHeading(2)}><TitleIcon fontSize="small" /></Button></Tooltip>
                 <Tooltip title="Heading 3"><Button onClick={() => applyHeading(3)}><TitleIcon fontSize="small" /></Button></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Bold"><IconButton size="small" onClick={() => applyCommand('bold')}><FormatBoldIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Italic"><IconButton size="small" onClick={() => applyCommand('italic')}><FormatItalicIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Underline"><IconButton size="small" onClick={() => applyCommand('underline')}><FormatUnderlinedIcon fontSize="small" /></IconButton></Tooltip>
@@ -266,24 +313,24 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
                 <Tooltip title="Superscript"><IconButton size="small" onClick={() => applyCommand('superscript')}><SuperscriptIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Subscript"><IconButton size="small" onClick={() => applyCommand('subscript')}><SubscriptIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Bulleted list"><IconButton size="small" onClick={() => applyList(false)}><FormatListBulletedIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Numbered list"><IconButton size="small" onClick={() => applyList(true)}><FormatListNumberedIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Align left"><IconButton size="small" onClick={() => applyAlign('Left')}><FormatAlignLeftIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Align center"><IconButton size="small" onClick={() => applyAlign('Center')}><FormatAlignCenterIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Align right"><IconButton size="small" onClick={() => applyAlign('Right')}><FormatAlignRightIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Insert link"><IconButton size="small" onClick={insertLink}><LinkIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Remove link"><IconButton size="small" onClick={removeLink}><LinkOffIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Code block"><IconButton size="small" onClick={insertCodeBlock}><CodeIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Blockquote"><IconButton size="small" onClick={insertBlockquote}><FormatQuoteIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>
-              <ButtonGroup size="small" variant="outlined">
+              <ButtonGroup size="small" variant="outlined" onMouseDown={(e) => e.preventDefault()}>
                 <Tooltip title="Text color"><IconButton size="small" onClick={setTextColor}><FormatColorTextIcon fontSize="small" /></IconButton></Tooltip>
                 <Tooltip title="Highlight"><IconButton size="small" onClick={setHighlight}><FormatColorFillIcon fontSize="small" /></IconButton></Tooltip>
               </ButtonGroup>

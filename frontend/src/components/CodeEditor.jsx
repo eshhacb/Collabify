@@ -22,6 +22,11 @@ const CodeEditor = ({
   const [output, setOutput] = useState("");
   const [stdin, setStdin] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const [showChat, setShowChat] = useState(true);
+  const [chatWidth, setChatWidth] = useState(340);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartWidthRef = useRef(340);
 
   const handleMonacoChange = (val) => {
     if (readOnly) return;
@@ -46,6 +51,37 @@ const CodeEditor = ({
   useEffect(() => {
     return () => cleanupRunner();
   }, [cleanupRunner]);
+
+  // Drag handlers for resizable chat panel
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const delta = dragStartXRef.current - clientX; // dragging left increases width
+      const next = Math.min(560, Math.max(260, dragStartWidthRef.current + delta));
+      setChatWidth(next);
+    };
+    const handleUp = () => {
+      isDraggingRef.current = false;
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleUp);
+    };
+  }, []);
+
+  const startDrag = (e) => {
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.touches ? e.touches[0].clientX : e.clientX;
+    dragStartWidthRef.current = chatWidth;
+    e.preventDefault();
+  };
 
   const handleRun = async () => {
     const code = (value ?? "").toString();
@@ -172,6 +208,14 @@ const CodeEditor = ({
         >
           {isRunning ? "Running..." : 'Run'}
         </button>
+        <button
+          type="button"
+          onClick={() => setShowChat((v) => !v)}
+          className="ml-auto text-sm px-2 py-1 border rounded"
+          title={showChat ? 'Hide AI Chat' : 'Show AI Chat'}
+        >
+          {showChat ? 'Hide Chat' : 'Show Chat'}
+        </button>
       </div>
 
       {/* Editor + Chat side-by-side */}
@@ -196,9 +240,18 @@ const CodeEditor = ({
           />
         </div>
         {/* AI Chat about this code (right side) */}
-        <div className="w-[340px] min-w-0 h-full">
-          <CodeChat language={language} code={value || ''} />
-        </div>
+        {showChat && (
+          <div className="h-full min-w-0 flex" style={{ width: chatWidth }}>
+            <div
+              className="w-1 cursor-col-resize bg-transparent hover:bg-gray-300"
+              onMouseDown={startDrag}
+              onTouchStart={startDrag}
+            />
+            <div className="flex-1 min-w-0">
+              <CodeChat language={language} code={value || ''} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stdin */}
