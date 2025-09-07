@@ -37,6 +37,12 @@ export const updateDocumentTitle = async (documentId, title) => {
   return response.data;
 };
 
+// Collaborators
+export const listCollaborators = async (documentId) => {
+  const response = await axios.get(`${API_URL}/${documentId}/collaborators`, { withCredentials: true });
+  return response.data; // { collaborators }
+};
+
 // Collaborator management (admin)
 export const addCollaborator = async (documentId, payload) => {
   const response = await axios.post(

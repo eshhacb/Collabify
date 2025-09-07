@@ -4,7 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 420;
 
-const Sidebar = ({ width, onResize }) => {
+const Sidebar = ({ width, onResize, linkSearch }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(width || 240);
@@ -50,10 +50,13 @@ const Sidebar = ({ width, onResize }) => {
       <nav className="flex-1 overflow-auto">
         <ul className="py-2">
           <li>
-            <RouterLink className="block px-4 py-2 hover:bg-gray-50" to="/collaboration">Collaboration</RouterLink>
+            <RouterLink className="block px-4 py-2 hover:bg-gray-50" to="/documents">Documents</RouterLink>
           </li>
           <li>
-            <RouterLink className="block px-4 py-2 hover:bg-gray-50" to="/documents">Documents</RouterLink>
+            <RouterLink className="block px-4 py-2 hover:bg-gray-50" to={{ pathname: "/collaborators", search: linkSearch ?? (typeof window !== 'undefined' ? window.location.search : '') }}>Collaborators</RouterLink>
+          </li>
+          <li>
+            <RouterLink className="block px-4 py-2 hover:bg-gray-50" to={{ pathname: "/tasks", search: linkSearch ?? (typeof window !== 'undefined' ? window.location.search : '') }}>Tasks</RouterLink>
           </li>
           <li>
             <RouterLink className="block px-4 py-2 hover:bg-gray-50" to="/profile">Profile</RouterLink>

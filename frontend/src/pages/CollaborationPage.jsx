@@ -58,7 +58,7 @@ const CollaborationPage = () => {
 
   return (
     <div className="flex h-full min-h-0">
-      <Sidebar width={sidebarWidth} onResize={setSidebarWidth} />
+      <Sidebar width={sidebarWidth} onResize={setSidebarWidth} linkSearch={`?documentId=${documentId}`} />
       <div className="flex-1 min-w-0 p-6 bg-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <div>

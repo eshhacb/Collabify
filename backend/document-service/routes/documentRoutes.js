@@ -5,6 +5,7 @@ import {
   getDocumentById,
   updateDocument,
   deleteDocument,
+  listCollaborators,
   addCollaborator,
   updateCollaboratorRole,
   removeCollaborator,
@@ -15,6 +16,7 @@ import {
 } from "../controllers/documentController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import taskRoutes from "./taskRoutes.js";
 
 const router = express.Router();
 
@@ -42,6 +44,14 @@ router.delete(
   authenticateToken,
   authorizeRoles("admin"),
   deleteDocument
+);
+
+// Collaborators
+router.get(
+  "/:documentId/collaborators",
+  authenticateToken,
+  authorizeRoles("viewer", "editor", "admin"),
+  listCollaborators
 );
 
 // Collaborator management (admin only)
@@ -93,5 +103,8 @@ router.post(
   "/internal/invitations/accept",
   acceptInvitationMembership
 );
+
+// Mount task routes under documents
+router.use("/", taskRoutes);
 
 export default router;

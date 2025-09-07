@@ -3,6 +3,18 @@ import { sendInvitationEmail } from '../services/emailService.js';
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 
+// Normalize emails: strip surrounding quotes and extract address inside angle brackets
+const normalizeEmail = (input) => {
+  if (!input) return '';
+  let s = String(input).trim();
+  // If format like: Name <email@domain>
+  const angle = s.match(/<([^>]+)>/);
+  if (angle) s = angle[1];
+  // Remove leading/trailing single or double quotes
+  s = s.replace(/^["']+|["']+$/g, '');
+  return s.toLowerCase();
+};
+
 // Get invitations by recipient email
 export const getInvitationsByRecipient = async (req, res) => {
   try {
@@ -57,7 +69,8 @@ export const rejectInvitation = async (req, res) => {
 // Send invitation
 export const sendInvitation = async (req, res) => {
   try {
-    const { email, documentId, documentTitle, role, invitedBy, invitedByName } = req.body;
+    const { email: rawEmail, documentId, documentTitle, role, invitedBy, invitedByName } = req.body;
+    const email = normalizeEmail(rawEmail);
 
     // Validate required fields
     if (!email || !documentId || !documentTitle || !role || !invitedBy || !invitedByName) {
@@ -83,7 +96,7 @@ export const sendInvitation = async (req, res) => {
 
     // Check if invitation already exists for this email and document
     const existingInvitation = await Invitation.findOne({
-      email: email.toLowerCase(),
+      email,
       documentId,
       status: 'pending'
     });
@@ -103,7 +116,7 @@ export const sendInvitation = async (req, res) => {
 
     // Create invitation
     const invitation = await Invitation.create({
-      email: email.toLowerCase(),
+      email,
       documentId,
       documentTitle,
       role,

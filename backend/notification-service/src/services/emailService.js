@@ -30,6 +30,16 @@ const createTransporter = () => {
   });
 };
 
+// Normalize emails so "Name <email@domain>" or quoted addresses become just the raw address
+const normalizeEmail = (input) => {
+  if (!input) return '';
+  let s = String(input).trim();
+  const angle = s.match(/<([^>]+)>/);
+  if (angle) s = angle[1];
+  s = s.replace(/^["']+|["']+$/g, '');
+  return s;
+};
+
 // Email template for invitation
 const createInvitationEmailTemplate = (invitation, acceptUrl) => {
   const roleText = invitation.role === 'editor' ? 'edit' : 'view';
@@ -109,7 +119,7 @@ export const sendInvitationEmail = async (invitation, acceptUrl) => {
     const fromAddress = process.env.SMTP_USER || process.env.GMAIL_USER;
     const mailOptions = {
       from: `"Collabify" <${fromAddress}>`,
-      to: invitation.email,
+      to: normalizeEmail(invitation.email),
       subject: `You've been invited to collaborate on "${invitation.documentTitle}"`,
       html: createInvitationEmailTemplate(invitation, acceptUrl),
       text: `

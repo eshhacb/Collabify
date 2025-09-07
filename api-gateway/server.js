@@ -37,6 +37,19 @@ app.use(
       proxyReqOpts.headers = { ...srcReq.headers };
       return proxyReqOpts;
     },
+    userResHeaderDecorator: (headers, userReq) => {
+      // Ensure proper CORS headers for auth responses as well
+      const allowed = new Set(["http://localhost:5173", "http://localhost:3000"]);
+      const origin = userReq.headers.origin;
+      if (origin && allowed.has(origin)) {
+        headers["access-control-allow-origin"] = origin;
+        headers["vary"] = "Origin";
+        headers["access-control-allow-credentials"] = "true";
+        headers["access-control-allow-headers"] = "Content-Type, Authorization";
+        headers["access-control-allow-methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+      }
+      return headers;
+    },
     proxyErrorHandler: (err, res, next) => {
       res.status(500).json({ error: "API Gateway Proxy Error" });
     },

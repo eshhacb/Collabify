@@ -10,6 +10,8 @@ import InvitationAccept from "./pages/InvitationAccept";
 import Invitations from "./pages/Invitations";
 import RequireAuth from "./shared/RequireAuth";
 import Profile from "./pages/Profile";
+import CollaboratorsPage from "./pages/CollaboratorsPage";
+import TasksPage from "./pages/TasksPage";
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
           <Route element={<RequireAuth />}>
             <Route path="/collaborate/:documentId" element={<CollaborationPage />} />
             <Route path="/documents" element={<DocumentPage />} />
+            <Route path="/collaborators" element={<CollaboratorsPage />} />
+            <Route path="/tasks" element={<TasksPage />} />
             <Route path="/invitations" element={<Invitations />} />
             <Route path="/profile" element={<Profile />} />
           </Route>

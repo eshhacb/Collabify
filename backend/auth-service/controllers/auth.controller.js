@@ -51,6 +51,21 @@ export const logout = async (req, res) => {
   res.json({ message: "Logged out successfully" });
 };
 
+// Batch user lookup by IDs (service use or internal admin)
+export const getUsersByIds = async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
+    if (!ids.length) return res.json({ users: [] });
+    const users = await User.findAll({
+      where: { id: ids },
+      attributes: ["id", "name", "email"],
+    });
+    return res.json({ users });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 export const acceptInvitation = async (req, res) => {
   try {
     const { invitationToken, userData } = req.body;

@@ -180,6 +180,24 @@ export const deleteDocument = async (req, res) => {
 
 const VALID_ROLES = ["viewer", "editor", "admin"];
 
+// LIST collaborators (viewer/editor/admin)
+export const listCollaborators = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const rows = await UserDocument.findAll({ where: { documentId }, order: [["joined_at", "DESC"]] });
+    const collaborators = rows.map(r => ({
+      id: r.id,
+      userId: r.userId,
+      role: r.role,
+      joined_at: r.joined_at,
+      invitedBy: r.invitedBy,
+    }));
+    return res.json({ collaborators });
+  } catch (error) {
+    return res.status(500).json({ message: "Error listing collaborators", error: error.message });
+  }
+};
+
 // ADD collaborator (admin)
 export const addCollaborator = async (req, res) => {
   try {

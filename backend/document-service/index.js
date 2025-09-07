@@ -20,6 +20,8 @@ app.use(
 // ✅ API Routes
 app.use("/api/documents", documentRoutes);
 
+// tasks endpoints are included inside documentRoutes
+
 // ✅ Start Server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, async () => {
