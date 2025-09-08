@@ -3,7 +3,7 @@ import sequelize from "../config/db.js";
 import Document from "./Document.model.js";
 
 // PostgreSQL: tasks per document
-// Columns: id | doc_id | title | description | status | assignee_id | created_by | due_date | created_at | updated_at
+// Columns: id | doc_id | title | description | status | assignee_id | created_by | due_date | submission_note | submitted_at | created_at | updated_at
 const Task = sequelize.define(
   "Task",
   {
@@ -46,6 +46,16 @@ const Task = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
       field: "due_date",
+    },
+    submissionNote: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: "submission_note",
+    },
+    submittedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "submitted_at",
     },
   },
   {

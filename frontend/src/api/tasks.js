@@ -19,6 +19,11 @@ export const updateTask = async (documentId, taskId, payload) => {
   return res.data;
 };
 
+export const submitTask = async (documentId, taskId, note) => {
+  const res = await axios.post(`${API_URL}/${documentId}/tasks/${taskId}/submit`, { note }, { withCredentials: true });
+  return res.data; // { message, task }
+};
+
 export const deleteTask = async (documentId, taskId) => {
   const res = await axios.delete(`${API_URL}/${documentId}/tasks/${taskId}`, { withCredentials: true });
   return res.data;

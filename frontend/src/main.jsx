@@ -28,6 +28,15 @@ const ColorModeProvider = ({ children }) => {
   const { mode, toggle } = usePersistedMode()
   const colorMode = useMemo(() => ({ toggleColorMode: toggle, mode }), [toggle, mode])
   const theme = useMemo(() => createTheme({ palette: { mode } }), [mode])
+  // Sync Tailwind's class-based dark mode with MUI mode
+  useEffect(() => {
+    const root = document.documentElement
+    if (mode === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+  }, [mode])
   return (
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>

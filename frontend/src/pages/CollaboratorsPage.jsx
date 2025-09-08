@@ -9,6 +9,7 @@ export default function CollaboratorsPage() {
   const [collaborators, setCollaborators] = useState([]);
   const [doc, setDoc] = useState(null);
   const [role, setRole] = useState(null);
+  const [meId, setMeId] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,15 +22,18 @@ export default function CollaboratorsPage() {
       .then(async ([docRes, collabRes]) => {
         setDoc(docRes.document);
         setRole(docRes.userRole);
+        const myId = docRes.userId || docRes.meId || localStorage.getItem("userId");
+        setMeId(myId || null);
         const raw = collabRes.collaborators || [];
-        setCollaborators(raw);
+        const filtered = myId ? raw.filter(c => c.userId !== myId) : raw;
+        setCollaborators(filtered);
         // Enrich with names/emails
-        const ids = Array.from(new Set(raw.map(c => c.userId).filter(Boolean)));
+        const ids = Array.from(new Set((myId ? raw.filter(c => c.userId !== myId) : raw).map(c => c.userId).filter(Boolean)));
         if (ids.length) {
           try {
             const { users } = await getUsersByIds(ids);
             const map = new Map(users.map(u => [u.id, u]));
-            setCollaborators(raw.map(c => ({
+            setCollaborators((myId ? raw.filter(c => c.userId !== myId) : raw).map(c => ({
               ...c,
               user: map.get(c.userId) || null,
             })));
@@ -95,7 +99,7 @@ export default function CollaboratorsPage() {
               ))}
               {(!collaborators || collaborators.length === 0) && (
                 <tr>
-                  <td className="p-3" colSpan={4}>No collaborators yet.</td>
+                  <td className="p-3" colSpan={6}>No collaborators yet.</td>
                 </tr>
               )}
             </tbody>

@@ -174,11 +174,11 @@ const CodeEditor = ({
   return (
     <div className="w-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-2 text-gray-800 dark:text-gray-200">
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
+          className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-2 py-1 text-sm"
         >
           <option value="javascript">JavaScript</option>
           <option value="typescript">TypeScript</option>
@@ -211,7 +211,7 @@ const CodeEditor = ({
         <button
           type="button"
           onClick={() => setShowChat((v) => !v)}
-          className="ml-auto text-sm px-2 py-1 border rounded"
+          className="ml-auto text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded"
           title={showChat ? 'Hide AI Chat' : 'Show AI Chat'}
         >
           {showChat ? 'Hide Chat' : 'Show Chat'}
@@ -221,7 +221,7 @@ const CodeEditor = ({
       {/* Editor + Chat side-by-side */}
       <div className="flex gap-3 h-[60vh] min-h-0 overflow-hidden">
         {/* Monaco Editor */}
-        <div className="h-full border rounded-md overflow-hidden flex-1 min-w-0">
+        <div className="h-full border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden flex-1 min-w-0 bg-white dark:bg-gray-900">
           <Editor
             height="100%"
             defaultLanguage={language}
@@ -243,11 +243,11 @@ const CodeEditor = ({
         {showChat && (
           <div className="h-full min-w-0 flex" style={{ width: chatWidth }}>
             <div
-              className="w-1 cursor-col-resize bg-transparent hover:bg-gray-300"
+              className="w-1 cursor-col-resize bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600"
               onMouseDown={startDrag}
               onTouchStart={startDrag}
             />
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-l-0 border-gray-300 dark:border-gray-700 rounded-r-md">
               <CodeChat language={language} code={value || ''} />
             </div>
           </div>
@@ -256,19 +256,19 @@ const CodeEditor = ({
 
       {/* Stdin */}
       <div className="mt-3">
-        <div className="text-sm font-semibold text-gray-700 mb-1">stdin</div>
+        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">stdin</div>
         <textarea
           value={stdin}
           onChange={(e) => setStdin(e.target.value)}
           placeholder="Provide input lines here (readLine() will read line by line)"
-          className="w-full h-24 border rounded-md p-2 font-mono text-sm"
+          className="w-full h-24 border border-gray-300 dark:border-gray-700 rounded-md p-2 font-mono text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
         />
       </div>
 
       {/* Output */}
       <div className="mt-3">
-        <div className="text-sm font-semibold text-gray-700 mb-1">Output</div>
-        <pre className="w-full h-48 overflow-auto border rounded-md p-2 bg-black text-green-200 text-sm">
+        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Output</div>
+        <pre className="w-full h-48 overflow-auto border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-gray-900 text-green-200 text-sm">
 {output || ""}
         </pre>
       </div>

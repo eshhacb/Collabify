@@ -6,6 +6,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  submitTask,
 } from "../controllers/taskController.js";
 
 const router = express.Router({ mergeParams: true });
@@ -18,20 +19,28 @@ router.get(
   listTasks
 );
 
-// Create task (editor/admin)
+// Create task (admin only)
 router.post(
   "/:documentId/tasks",
   authenticateToken,
-  authorizeRoles("editor", "admin"),
+  authorizeRoles("admin"),
   createTask
 );
 
-// Update task (editor/admin)
+// Update task (editor/admin or assignee limited)
 router.put(
   "/:documentId/tasks/:taskId",
   authenticateToken,
-  authorizeRoles("editor", "admin"),
+  authorizeRoles("viewer", "editor", "admin"),
   updateTask
+);
+
+// Submit task (assignee only; middleware allows viewer/editor/admin to reach controller where assignee is enforced)
+router.post(
+  "/:documentId/tasks/:taskId/submit",
+  authenticateToken,
+  authorizeRoles("viewer", "editor", "admin"),
+  submitTask
 );
 
 // Delete task (admin)

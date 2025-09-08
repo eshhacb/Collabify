@@ -136,7 +136,8 @@ export const getDocumentById = async (req, res) => {
     const membership = await UserDocument.findOne({ where: { documentId, userId } });
     const userRole = membership?.role || null;
 
-    return res.json({ document, userRole });
+    // include meId so frontend can check assignee
+    return res.json({ document, userRole, userId });
   } catch (error) {
     return res.status(500).json({ message: "Error retrieving document", error: error.message });
   }
