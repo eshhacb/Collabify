@@ -69,6 +69,7 @@ export const getUsersByIds = async (req, res) => {
 export const acceptInvitation = async (req, res) => {
   try {
     const { invitationToken, userData } = req.body;
+    console.log(invitationToken);
 
     if (!invitationToken) {
       return res.status(400).json({ message: "Invitation token is required" });

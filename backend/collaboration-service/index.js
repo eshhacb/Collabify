@@ -59,12 +59,12 @@ io.on("connection", (socket) => {
     if (!document) {
       document = await Document.findOneAndUpdate(
         { _id: documentId },
-        { $setOnInsert: { doc_id: documentId, content: "" } },
+        { $setOnInsert: { doc_id: documentId, content: "", code: "" } },
         { upsert: true, new: true }
       );
     }
 
-    socket.emit("load-document", { content: document.content, updated_at: document.updated_at });
+    socket.emit("load-document", { content: document.content, code: document.code || "", updated_at: document.updated_at });
     console.log(`User joined document ${documentId}`);
   });
 
@@ -101,6 +101,21 @@ io.on("connection", (socket) => {
 
 
   //undo will use OT so not implemented yet 
+  // Code updates (realtime like document)
+  socket.on("edit-code", async ({ documentId, code }) => {
+    try {
+      let document = await Document.findById(documentId);
+      if (!document) return;
+      // Broadcast to others in the room
+      socket.to(documentId).emit("code-updated", code ?? "");
+      // Persist
+      document.code = code ?? "";
+      await document.save();
+    } catch (e) {
+      console.error("Error updating code:", e);
+    }
+  });
+
 socket.on("undo", async ({ documentId }) => {
   let document = await Document.findById(documentId);
   if (!document || document.history.length === 0) return;

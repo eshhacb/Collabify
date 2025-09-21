@@ -113,8 +113,19 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
       setDocContent(newContent);
       onContentChange(newContent);
     };
+    const handleCodeUpdate = (newCode) => {
+      setCodeContent(newCode ?? "");
+    };
+    const handleLoad = (data) => {
+      setDocContent(data?.content || "");
+      setCodeContent(typeof data?.code === 'string' ? data.code : "");
+      setDocumentTitle((prev) => prev || data?.title || "Untitled Document");
+      onContentChange(data?.content || "");
+    };
 
     socket.on("document-updated", handleDocumentUpdate);
+    socket.on("code-updated", handleCodeUpdate);
+    socket.on("load-document", handleLoad);
 
     axios
       .get(`${API_BASE_URL}/api/collaboration/${documentId}`, { withCredentials: false })
@@ -131,6 +142,8 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
 
     return () => {
       socket.off("document-updated", handleDocumentUpdate);
+      socket.off("code-updated", handleCodeUpdate);
+      socket.off("load-document", handleLoad);
       socket.emit("leave-document", documentId);
     };
   }, [documentId,onContentChange]);
@@ -155,20 +168,23 @@ const Editor = ({ documentId, onContentChange, externalContent  }) => {
     onContentChange(value);
   };
 
-  // Code editor change handler (persist to backend + local)
+  // Code editor change handler (persist to backend + local + realtime)
   const handleCodeChange = useCallback(
     debounce((value) => {
       const next = value ?? "";
       setCodeContent(next);
       // Save to backend if user can edit
       if (userRole === "editor" || userRole === "admin") {
+        // realtime broadcast
+        socket.emit("edit-code", { documentId, code: next });
+        // persistence endpoint (optional backup)
         fetch(`${API_BASE_URL}/api/collaboration/${documentId}/code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: next }),
         }).catch((err) => console.error('Failed to save code:', err));
       }
-    }, 800),
+    }, 300),
     [API_BASE_URL, documentId, userRole]
   );
 
